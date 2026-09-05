@@ -1,5 +1,7 @@
 rootProject.name = "Todo"
 
+@file:Suppress("UnstableApiUsage")
+
 pluginManagement {
     repositories {
         google {

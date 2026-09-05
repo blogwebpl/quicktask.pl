@@ -18,13 +18,11 @@ fun MainLayout() {
             AppDrawer()
         },
         content = {
-            MainContent(
-                onOpenDrawer = {
-                    scope.launch {
-                        drawerState.open()
-                    }
-                },
-            )
+            MainContent {
+                scope.launch {
+                    drawerState.open()
+                }
+            }
         },
     )
 }

@@ -1,5 +1,6 @@
 package pl.quicktask.todo
 
+@Suppress("unused")
 class Greeting {
     private val platform = getPlatform()
 
