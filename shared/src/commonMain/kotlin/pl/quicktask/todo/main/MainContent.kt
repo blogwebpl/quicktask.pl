@@ -1,4 +1,4 @@
-package pl.quicktask.todo
+package pl.quicktask.todo.main
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainContent(onOpenDrawer: () -> Unit = {}) {
+fun MainContent(
+    onOpenDrawer: () -> Unit = {},
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -24,8 +26,8 @@ fun MainContent(onOpenDrawer: () -> Unit = {}) {
                             contentDescription = "Menu",
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) {}
 }

@@ -1,4 +1,4 @@
-package pl.quicktask.todo
+package pl.quicktask.todo.main
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ModalDrawerSheet
@@ -12,7 +12,7 @@ fun AppDrawer() {
     ModalDrawerSheet {
         Text(
             text = "Zawartość Drawera",
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
         )
     }
 }
