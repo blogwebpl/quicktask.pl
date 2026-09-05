@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">QuickTask</string>
+    <string name="email">Email</string>
+    <string name="password">Hasło</string>
+    <string name="login_button">Zaloguj się</string>
+    <string name="drawer_content">Zawartość Drawera</string>
+    <string name="menu">Menu</string>
+</resources>
