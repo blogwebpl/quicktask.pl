@@ -57,6 +57,9 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.cryptography.provider.jdk)
+            implementation(libs.androidx.security.crypto)
+            implementation(libs.multiplatformSettings)
+            implementation(libs.ktor.client.okhttp)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -84,6 +87,10 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation(libs.cryptography.provider.jdk)
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }

@@ -19,7 +19,9 @@ fun App(
 
     MaterialTheme {
         if (uiState.isLoggedIn) {
-            MainLayout()
+            MainLayout(
+                onLogout = { authViewModel.logout() },
+            )
         } else {
             LoginScreen(viewModel = authViewModel)
         }

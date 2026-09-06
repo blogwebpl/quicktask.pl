@@ -8,21 +8,31 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun MainLayout() {
+fun MainLayout(
+    onLogout: () -> Unit = {},
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            AppDrawer()
+            AppDrawer(
+                onLogout = {
+                    scope.launch { drawerState.close() }
+                    onLogout()
+                },
+            )
         },
         content = {
-            MainContent {
-                scope.launch {
-                    drawerState.open()
-                }
-            }
+            MainContent(
+                onOpenDrawer = {
+                    scope.launch {
+                        drawerState.open()
+                    }
+                },
+                onLogout = onLogout,
+            )
         },
     )
 }
