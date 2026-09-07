@@ -13,7 +13,7 @@ import pl.quicktask.todo.main.MainLayout
 @Composable
 @Preview
 fun App(
-    authViewModel: AuthViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel { AuthViewModel() },
 ) {
     val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
 

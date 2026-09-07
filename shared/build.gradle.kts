@@ -60,12 +60,15 @@ kotlin {
             implementation(libs.androidx.security.crypto)
             implementation(libs.multiplatformSettings)
             implementation(libs.ktor.client.okhttp)
+            implementation(files("libs/opaque-kmp.aar"))
+            implementation("net.java.dev.jna:jna:5.17.0@aar")
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.materialIconsCore)
+            implementation(libs.compose.materialIconsExtended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
@@ -84,10 +87,13 @@ kotlin {
         jsMain.dependencies {
             implementation(libs.wrappers.browser)
             implementation(libs.cryptography.provider.webcrypto)
+            implementation(npm("@serenity-kit/opaque", "1.1.0"))
         }
         jvmMain.dependencies {
             implementation(libs.cryptography.provider.jdk)
             implementation(libs.ktor.client.okhttp)
+            implementation(files("libs/opaque-kmp-classes.jar"))
+            implementation("net.java.dev.jna:jna:5.17.0")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
