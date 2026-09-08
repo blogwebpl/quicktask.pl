@@ -38,8 +38,8 @@ fun LoginScreen(
     viewModel: AuthViewModel = viewModel { AuthViewModel() },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("admin@example.com") }
+    var password by remember { mutableStateOf("admin") }
 
     Box(
         modifier = Modifier.fillMaxSize(),
