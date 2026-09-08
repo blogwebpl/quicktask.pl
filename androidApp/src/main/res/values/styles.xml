@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Background color of the splash screen -->
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <!-- Icon shown on splash screen - set to transparent to hide the app icon -->
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <!-- Theme to apply after splash screen is dismissed -->
+        <item name="postSplashScreenTheme">@style/Theme.App</item>
+    </style>
+</resources>
