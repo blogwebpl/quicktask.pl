@@ -79,15 +79,25 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            uiState.errorMessage?.let { error ->
+            val displayedError = when {
+                uiState.errorMessage != null -> uiState.errorMessage
+                uiState.errorMessageRes != null -> stringResource(uiState.errorMessageRes!!)
+                else -> null
+            }
+
+            displayedError?.let { msg ->
                 Text(
-                    text = error,
+                    text = msg,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
 
+            val onLoginClick = remember(viewModel, email, password) {
+                { viewModel.login(email, password) }
+            }
+
             Button(
-                onClick = { viewModel.login(email, password) },
+                onClick = onLoginClick,
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) {

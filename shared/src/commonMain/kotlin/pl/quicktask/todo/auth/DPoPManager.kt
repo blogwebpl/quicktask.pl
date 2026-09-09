@@ -1,5 +1,6 @@
 package pl.quicktask.todo.auth
 
+import com.russhwolf.settings.Settings
 import dev.whyoleg.cryptography.algorithms.EC
 import dev.whyoleg.cryptography.algorithms.ECDSA
 import dev.whyoleg.cryptography.algorithms.SHA256
@@ -15,27 +16,75 @@ interface DPoPManager {
         url: String,
         accessToken: String? = null,
     ): String
+
+    fun clearKeyPair()
 }
 
-class DefaultDPoPManager : DPoPManager {
+class DefaultDPoPManager(
+    private val settings: Settings = createSettings(),
+) : DPoPManager {
 
     private val provider by lazy { getCryptographyProvider() }
-    private var keyPair: ECDSA.KeyPair? = null
+    private var privateKey: ECDSA.PrivateKey? = null
     private var publicKeyRaw: ByteArray? = null
 
-    private suspend fun getOrGenerateKeyPair(): Pair<ECDSA.KeyPair, ByteArray> {
-        keyPair?.let { pair ->
-            publicKeyRaw?.let { raw -> return pair to raw }
+    private suspend fun getOrGenerateKeyPair(): Pair<ECDSA.PrivateKey, ByteArray> {
+        val savedPrivateKeyBase64 = settings.getStringOrNull(KEY_DPOP_PRIVATE_KEY)
+        val savedPublicKeyBase64 = settings.getStringOrNull(KEY_DPOP_PUBLIC_KEY)
+
+        if (savedPrivateKeyBase64.isNullOrBlank() || savedPublicKeyBase64.isNullOrBlank()) {
+            privateKey = null
+            publicKeyRaw = null
+        } else {
+            privateKey?.let { priv ->
+                publicKeyRaw?.let { raw -> return priv to raw }
+            }
+
+            val ecdsa = provider.get(ECDSA)
+            try {
+                val privateKeyBytes = savedPrivateKeyBase64.fromBase64()
+                val publicKeyBytes = savedPublicKeyBase64.fromBase64()
+
+                val restoredPrivateKey = ecdsa.privateKeyDecoder(EC.Curve.P256)
+                    .decodeFromByteArray(EC.PrivateKey.Format.DER, privateKeyBytes)
+                val restoredPublicKey = ecdsa.publicKeyDecoder(EC.Curve.P256)
+                    .decodeFromByteArray(EC.PublicKey.Format.DER, publicKeyBytes)
+
+                val raw = restoredPublicKey.encodeToByteArray(EC.PublicKey.Format.RAW)
+
+                privateKey = restoredPrivateKey
+                publicKeyRaw = raw
+
+                return restoredPrivateKey to raw
+            } catch (_: Exception) {
+                clearKeyPair()
+            }
         }
 
         val ecdsa = provider.get(ECDSA)
         val generatedPair = ecdsa.keyPairGenerator(EC.Curve.P256).generateKey()
+        val privateKeyBytes = generatedPair.privateKey.encodeToByteArray(EC.PrivateKey.Format.DER)
+        val publicKeyBytes = generatedPair.publicKey.encodeToByteArray(EC.PublicKey.Format.DER)
         val raw = generatedPair.publicKey.encodeToByteArray(EC.PublicKey.Format.RAW)
 
-        keyPair = generatedPair
+        try {
+            settings.putString(KEY_DPOP_PRIVATE_KEY, privateKeyBytes.toBase64())
+            settings.putString(KEY_DPOP_PUBLIC_KEY, publicKeyBytes.toBase64())
+        } catch (_: Exception) {
+            // Memory key pair will still function for current process lifetime if settings write fails
+        }
+
+        privateKey = generatedPair.privateKey
         publicKeyRaw = raw
 
-        return generatedPair to raw
+        return generatedPair.privateKey to raw
+    }
+
+    override fun clearKeyPair() {
+        privateKey = null
+        publicKeyRaw = null
+        settings.remove(KEY_DPOP_PRIVATE_KEY)
+        settings.remove(KEY_DPOP_PUBLIC_KEY)
     }
 
     override suspend fun generateDPoPProof(
@@ -43,7 +92,7 @@ class DefaultDPoPManager : DPoPManager {
         url: String,
         accessToken: String?,
     ): String {
-        val (pair, rawPublic) = getOrGenerateKeyPair()
+        val (privKey, rawPublic) = getOrGenerateKeyPair()
 
         // RAW format dla P-256 (65 bajtów): 0x04 || X (32 bajty) || Y (32 bajty)
         val xBytes = if (rawPublic.size >= 65) rawPublic.copyOfRange(1, 33) else rawPublic
@@ -83,7 +132,7 @@ class DefaultDPoPManager : DPoPManager {
         val payloadBase64 = payloadObj.toString().encodeToByteArray().toBase64Url()
 
         val signingInput = "$headerBase64.$payloadBase64"
-        val signatureGenerator = pair.privateKey.signatureGenerator(SHA256, ECDSA.SignatureFormat.RAW)
+        val signatureGenerator = privKey.signatureGenerator(SHA256, ECDSA.SignatureFormat.RAW)
         val signatureBytes = signatureGenerator.generateSignature(signingInput.encodeToByteArray())
         val signatureBase64 = signatureBytes.toBase64Url()
 
@@ -101,5 +150,10 @@ class DefaultDPoPManager : DPoPManager {
             .replace('+', '-')
             .replace('/', '_')
             .replace("=", "")
+    }
+
+    companion object {
+        private const val KEY_DPOP_PRIVATE_KEY = "clearmind.dpop.privateKey"
+        private const val KEY_DPOP_PUBLIC_KEY = "clearmind.dpop.publicKey"
     }
 }

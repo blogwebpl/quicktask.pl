@@ -1,0 +1,40 @@
+<resources>
+    <string name="app_name">QuickTask</string>
+
+    <!-- Auth -->
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="login_button">Log in</string>
+    <string name="logout_button">Log out</string>
+    <string name="error_invalid_credentials">Invalid email or password</string>
+    <string name="error_too_many_requests">Too many login attempts. Please wait a moment and try again.</string>
+    <string name="error_login_failed">An error occurred during login</string>
+    <string name="error_authentication_failed">Failed to authenticate. Check your login details.</string>
+    <string name="error_invalid_dpop_proof">Failed to verify request security. Please try again.</string>
+    <string name="error_invalid_login_request">Cannot initiate secure login. Refresh the page and try again.</string>
+    <string name="error_access_token_expired">Session expired.</string>
+
+    <!-- Navigation Drawer & Layout -->
+    <string name="drawer_content">Drawer content</string>
+    <string name="menu">Menu</string>
+
+    <!-- Drawer Sections -->
+    <string name="section_capture">CAPTURE</string>
+    <string name="section_actions">ACTIONS</string>
+    <string name="section_projects">PROJECTS</string>
+    <string name="section_library">LIBRARY</string>
+    <string name="section_review">REVIEW</string>
+    <string name="section_history">HISTORY</string>
+
+    <!-- Screens -->
+    <string name="screen_inbox">Inbox</string>
+    <string name="screen_next_actions">Next Actions</string>
+    <string name="screen_scheduled">Scheduled</string>
+    <string name="screen_waiting">Waiting</string>
+    <string name="screen_projects">All Projects</string>
+    <string name="screen_someday">Someday/Maybe</string>
+    <string name="screen_reference">Reference</string>
+    <string name="screen_weekly_review">Review</string>
+    <string name="screen_completed">Completed</string>
+    <string name="screen_trash">Trash</string>
+</resources>

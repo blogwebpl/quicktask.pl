@@ -40,13 +40,9 @@ actual fun createSettings(): Settings {
     return try {
         createEncryptedSettings(context)
     } catch (_: Exception) {
-        try {
-            context.deleteSharedPreferences("clearmind_encrypted_prefs")
-            createEncryptedSettings(context)
-        } catch (_: Exception) {
-            val prefs = context.getSharedPreferences("clearmind_prefs", Context.MODE_PRIVATE)
-            SharedPreferencesSettings(prefs)
-        }
+        // W przypadku uszkodzenia MasterKey wyczyszczenie uszkodzonych preferencji i ponowna proba
+        context.deleteSharedPreferences("clearmind_encrypted_prefs")
+        createEncryptedSettings(context)
     }
 }
 

@@ -19,33 +19,55 @@ fun MainLayout(
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf(Screen.INBOX) }
 
+    BackHandler(enabled = drawerState.isOpen) {
+        scope.launch {
+            drawerState.close()
+        }
+    }
+
+    BackHandler(enabled = (!drawerState.isOpen && currentScreen != Screen.INBOX)) {
+        currentScreen = Screen.INBOX
+    }
+
+    val handleNavigate: (String) -> Unit = remember {
+        { routeId ->
+            currentScreen = Screen.fromId(routeId)
+            scope.launch {
+                drawerState.close()
+            }
+        }
+    }
+
+    val handleLogout: () -> Unit = remember(onLogout) {
+        {
+            scope.launch {
+                drawerState.close()
+                onLogout()
+            }
+        }
+    }
+
+    val handleOpenDrawer: () -> Unit = remember {
+        {
+            scope.launch {
+                drawerState.open()
+            }
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
                 currentRoute = currentScreen.id,
-                onNavigate = { routeId ->
-                    currentScreen = Screen.fromId(routeId)
-                    scope.launch {
-                        drawerState.close()
-                    }
-                },
-                onLogout = {
-                    scope.launch {
-                        drawerState.close()
-                        onLogout()
-                    }
-                },
+                onNavigate = handleNavigate,
+                onLogout = handleLogout,
             )
         },
         content = {
             MainContent(
                 currentScreen = currentScreen,
-                onOpenDrawer = {
-                    scope.launch {
-                        drawerState.open()
-                    }
-                },
+                onOpenDrawer = handleOpenDrawer,
             )
         },
     )

@@ -4,18 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Coffee
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.HourglassEmpty
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,115 +12,138 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.app_name
+import todo.shared.generated.resources.ic_book
+import todo.shared.generated.resources.ic_check_circle
+import todo.shared.generated.resources.ic_coffee
+import todo.shared.generated.resources.ic_date_range
+import todo.shared.generated.resources.ic_delete
+import todo.shared.generated.resources.ic_email
+import todo.shared.generated.resources.ic_exit_to_app
+import todo.shared.generated.resources.ic_hourglass_empty
+import todo.shared.generated.resources.ic_list
+import todo.shared.generated.resources.ic_play_arrow
+import todo.shared.generated.resources.ic_star
 import todo.shared.generated.resources.logout_button
+import todo.shared.generated.resources.section_actions
+import todo.shared.generated.resources.section_capture
+import todo.shared.generated.resources.section_history
+import todo.shared.generated.resources.section_library
+import todo.shared.generated.resources.section_projects
+import todo.shared.generated.resources.section_review
 
 private data class DrawerItemData(
-    val id: String,
-    val label: String,
-    val icon: ImageVector,
+    val screen: Screen,
+    val iconRes: DrawableResource,
     val badge: Int? = null,
 )
 
 private data class DrawerSectionData(
-    val title: String,
+    val titleRes: StringResource,
     val items: List<DrawerItemData>,
 )
 
 private val drawerSections = listOf(
     DrawerSectionData(
-        title = "CAPTURE",
+        titleRes = Res.string.section_capture,
         items = listOf(
-            DrawerItemData("inbox", "Inbox", Icons.Outlined.Email),
+            DrawerItemData(Screen.INBOX, Res.drawable.ic_email),
         ),
     ),
     DrawerSectionData(
-        title = "ACTIONS",
+        titleRes = Res.string.section_actions,
         items = listOf(
-            DrawerItemData("next", "Next Actions", Icons.Outlined.PlayArrow),
-            DrawerItemData("scheduled", "Scheduled", Icons.Outlined.DateRange),
-            DrawerItemData("waiting", "Waiting", Icons.Outlined.HourglassEmpty),
+            DrawerItemData(Screen.NEXT_ACTIONS, Res.drawable.ic_play_arrow),
+            DrawerItemData(Screen.SCHEDULED, Res.drawable.ic_date_range),
+            DrawerItemData(Screen.WAITING, Res.drawable.ic_hourglass_empty),
         ),
     ),
     DrawerSectionData(
-        title = "PROJECTS",
+        titleRes = Res.string.section_projects,
         items = listOf(
-            DrawerItemData("projects", "All Projects", Icons.AutoMirrored.Outlined.List),
+            DrawerItemData(Screen.PROJECTS, Res.drawable.ic_list),
         ),
     ),
     DrawerSectionData(
-        title = "LIBRARY",
+        titleRes = Res.string.section_library,
         items = listOf(
-            DrawerItemData("someday", "Someday/Maybe", Icons.Outlined.Star),
-            DrawerItemData("reference", "Reference", Icons.Outlined.Book),
+            DrawerItemData(Screen.SOMEDAY, Res.drawable.ic_star),
+            DrawerItemData(Screen.REFERENCE, Res.drawable.ic_book),
         ),
     ),
     DrawerSectionData(
-        title = "REVIEW",
+        titleRes = Res.string.section_review,
         items = listOf(
-            DrawerItemData("review", "Weekly Review", Icons.Outlined.Coffee),
+            DrawerItemData(Screen.WEEKLY_REVIEW, Res.drawable.ic_coffee),
         ),
     ),
     DrawerSectionData(
-        title = "HISTORY",
+        titleRes = Res.string.section_history,
         items = listOf(
-            DrawerItemData("completed", "Completed", Icons.Outlined.CheckCircle),
-            DrawerItemData("trash", "Trash", Icons.Outlined.Delete),
+            DrawerItemData(Screen.COMPLETED, Res.drawable.ic_check_circle),
+            DrawerItemData(Screen.TRASH, Res.drawable.ic_delete),
         ),
     ),
 )
 
 @Composable
 fun AppDrawer(
-    currentRoute: String = "inbox",
+    currentRoute: String = Screen.INBOX.id,
     onNavigate: (String) -> Unit = {},
     onLogout: () -> Unit = {},
 ) {
     ModalDrawerSheet {
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(12.dp),
-        ) {
+        Column {
             Text(
                 text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(start = 28.dp, top = 20.dp, end = 16.dp, bottom = 16.dp),
             )
 
-            drawerSections.forEach { section ->
-                Text(
-                    text = section.title,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 6.dp),
-                )
+            HorizontalDivider()
 
-                section.items.forEach { item ->
-                    NavigationDrawerItem(
-                        label = { Text(item.label) },
-                        icon = { Icon(item.icon, contentDescription = null) },
-                        badge = item.badge?.let { { Text(it.toString()) } },
-                        selected = currentRoute == item.id,
-                        onClick = { onNavigate(item.id) },
-                        modifier = Modifier.padding(horizontal = 4.dp),
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(12.dp),
+            ) {
+                drawerSections.forEach { section ->
+                    Text(
+                        text = stringResource(section.titleRes),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 6.dp),
                     )
+
+                    section.items.forEach { item ->
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(item.screen.titleRes)) },
+                            icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
+                            badge = item.badge?.let { { Text(it.toString()) } },
+                            selected = currentRoute == item.screen.id,
+                            onClick = { onNavigate(item.screen.id) },
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
+                    }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                NavigationDrawerItem(
+                    label = { Text(stringResource(Res.string.logout_button)) },
+                    icon = { Icon(painterResource(Res.drawable.ic_exit_to_app), contentDescription = null) },
+                    selected = false,
+                    onClick = onLogout,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
             }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            NavigationDrawerItem(
-                label = { Text(stringResource(Res.string.logout_button)) },
-                icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
-                selected = false,
-                onClick = onLogout,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
         }
     }
 }

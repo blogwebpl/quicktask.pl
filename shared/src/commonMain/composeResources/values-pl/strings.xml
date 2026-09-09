@@ -1,9 +1,40 @@
 <resources>
     <string name="app_name">QuickTask</string>
+
+    <!-- Auth -->
     <string name="email">Email</string>
     <string name="password">Hasło</string>
     <string name="login_button">Zaloguj się</string>
     <string name="logout_button">Wyloguj się</string>
+    <string name="error_invalid_credentials">Nieprawidłowy email lub hasło</string>
+    <string name="error_too_many_requests">Zbyt wiele prób logowania. Odczekaj chwilę i spróbuj ponownie.</string>
+    <string name="error_login_failed">Wystąpił błąd logowania</string>
+    <string name="error_authentication_failed">Nie udało się uwierzytelnić. Sprawdź dane logowania.</string>
+    <string name="error_invalid_dpop_proof">Nie udało się potwierdzić bezpieczeństwa żądania. Spróbuj ponownie.</string>
+    <string name="error_invalid_login_request">Nie można rozpocząć bezpiecznego logowania. Odśwież stronę i spróbuj ponownie.</string>
+    <string name="error_access_token_expired">Sesja wygasła.</string>
+
+    <!-- Navigation Drawer & Layout -->
     <string name="drawer_content">Zawartość Drawera</string>
     <string name="menu">Menu</string>
+
+    <!-- Drawer Sections -->
+    <string name="section_capture">PRZECHWYTYWANIE</string>
+    <string name="section_actions">DZIAŁANIA</string>
+    <string name="section_projects">PROJEKTY</string>
+    <string name="section_library">BIBLIOTEKA</string>
+    <string name="section_review">PRZEGLĄD</string>
+    <string name="section_history">HISTORIA</string>
+
+    <!-- Screens -->
+    <string name="screen_inbox">Skrzynka odbiorcza</string>
+    <string name="screen_next_actions">Najbliższe działania</string>
+    <string name="screen_scheduled">Zaplanowane</string>
+    <string name="screen_waiting">Oczekujące</string>
+    <string name="screen_projects">Wszystkie projekty</string>
+    <string name="screen_someday">Może/Kiedyś</string>
+    <string name="screen_reference">Materiały</string>
+    <string name="screen_weekly_review">Przegląd</string>
+    <string name="screen_completed">Zakończone</string>
+    <string name="screen_trash">Kosz</string>
 </resources>

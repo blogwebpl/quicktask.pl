@@ -7,6 +7,16 @@ import io.ktor.util.decodeBase64Bytes
 import io.ktor.util.encodeBase64
 import kotlin.random.Random
 
+data class OpaqueRegisterStartResult(
+    val registrationRequest: String,
+    val clientRegistrationState: String,
+)
+
+data class OpaqueRegisterFinishResult(
+    val registrationRecord: String,
+    val exportKey: String,
+)
+
 data class OpaqueStartResult(
     val startLoginRequest: String,
     val clientLoginState: String,
@@ -18,6 +28,15 @@ data class OpaqueFinishResult(
 )
 
 interface OpaqueManager {
+    suspend fun startRegistration(password: String): OpaqueRegisterStartResult
+    suspend fun finishRegistration(
+        password: String,
+        clientRegistrationState: String,
+        registrationResponse: String,
+        email: String,
+        serverOrigin: String,
+    ): OpaqueRegisterFinishResult
+
     suspend fun startLogin(password: String): OpaqueStartResult
     suspend fun finishLogin(
         password: String,
@@ -32,12 +51,60 @@ class DefaultOpaqueManager : OpaqueManager {
 
     private val provider by lazy { getCryptographyProvider() }
 
-    override suspend fun startLogin(password: String): OpaqueStartResult {
-        // 1. Generowanie 32-bajtowego losowego czynnika oślepiającego (blinding factor a)
+    override suspend fun startRegistration(password: String): OpaqueRegisterStartResult {
         val blindFactor = ByteArray(32)
         Random.nextBytes(blindFactor)
 
-        // 2. Wyliczenie wyjścia OPRF OPAQUE (SHA512 nad hasłem i czynnikami)
+        val sha512 = provider.get(SHA512)
+        val passwordHash = sha512.hasher().hash(password.encodeToByteArray())
+
+        val blindedBytes = ByteArray(32)
+        for (i in 0 until 32) {
+            blindedBytes[i] = (passwordHash[i].toInt() xor blindFactor[i].toInt()).toByte()
+        }
+
+        return OpaqueRegisterStartResult(
+            registrationRequest = blindedBytes.toBase64Url(),
+            clientRegistrationState = blindFactor.toBase64Url(),
+        )
+    }
+
+    override suspend fun finishRegistration(
+        password: String,
+        clientRegistrationState: String,
+        registrationResponse: String,
+        email: String,
+        serverOrigin: String,
+    ): OpaqueRegisterFinishResult {
+        val blindFactor = clientRegistrationState.fromBase64Url()
+        val serverResponseBytes = registrationResponse.fromBase64Url()
+
+        val hmac256 = provider.get(HMAC).keyDecoder(SHA256)
+        val secretKey = hmac256.decodeFromByteArray(HMAC.Key.Format.RAW, blindFactor)
+        val oprfOutput = secretKey.signatureGenerator().generateSignature(serverResponseBytes)
+
+        val contextInfo = "$email|$serverOrigin".encodeToByteArray()
+        val exportKeyBytes = ByteArray(64)
+        val recordBytes = ByteArray(32)
+        for (i in 0 until 64) {
+            val oprfByte = if (i < oprfOutput.size) oprfOutput[i].toInt() else 0
+            val ctxByte = if (i < contextInfo.size) contextInfo[i].toInt() else 0
+            exportKeyBytes[i] = (oprfByte xor ctxByte).toByte()
+            if (i < 32) {
+                recordBytes[i] = (serverResponseBytes.getOrElse(i) { 0 }.toInt() xor oprfByte).toByte()
+            }
+        }
+
+        return OpaqueRegisterFinishResult(
+            registrationRecord = recordBytes.toBase64Url(),
+            exportKey = exportKeyBytes.toBase64Url(),
+        )
+    }
+
+    override suspend fun startLogin(password: String): OpaqueStartResult {
+        val blindFactor = ByteArray(32)
+        Random.nextBytes(blindFactor)
+
         val sha512 = provider.get(SHA512)
         val passwordHash = sha512.hasher().hash(password.encodeToByteArray())
 
@@ -65,21 +132,18 @@ class DefaultOpaqueManager : OpaqueManager {
         val blindFactor = clientLoginState.fromBase64Url()
         val serverResponseBytes = loginResponse.fromBase64Url()
 
-        // 1. Odpętlenie (unblind) odpowiedzi serwera i wyliczenie klucza OPAQUE
         val hmac256 = provider.get(HMAC).keyDecoder(SHA256)
         val secretKey = hmac256.decodeFromByteArray(HMAC.Key.Format.RAW, blindFactor)
         val oprfOutput = secretKey.signatureGenerator().generateSignature(serverResponseBytes)
 
-        // 2. Wyprowadzenie exportKey (z udziałem identyfikatorów email i serverOrigin)
         val contextInfo = "$email|$serverOrigin".encodeToByteArray()
-        val exportKeyBytes = ByteArray(32)
-        for (i in 0 until 32) {
+        val exportKeyBytes = ByteArray(64)
+        for (i in 0 until 64) {
             val oprfByte = if (i < oprfOutput.size) oprfOutput[i].toInt() else 0
             val ctxByte = if (i < contextInfo.size) contextInfo[i].toInt() else 0
             exportKeyBytes[i] = (oprfByte xor ctxByte).toByte()
         }
 
-        // 3. Wyliczenie komunikatu wykończeniowego finishLoginRequest (HMAC MAC)
         val finishMacGenerator = secretKey.signatureGenerator()
         val finishMacBytes = finishMacGenerator.generateSignature(exportKeyBytes)
 

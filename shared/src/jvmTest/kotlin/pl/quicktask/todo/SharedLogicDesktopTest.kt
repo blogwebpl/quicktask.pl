@@ -1,9 +1,10 @@
 package pl.quicktask.todo
 
+import kotlinx.coroutines.runBlocking
 import pl.quicktask.todo.auth.AuthRepository
 import pl.quicktask.todo.auth.JvmOpaqueManager
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -24,11 +25,38 @@ class SharedLogicDesktopTest {
     }
 
     @Test
-    fun testAdminLoginOnLiveServer() {
+    fun testJvmOpaqueManagerFinishLoginInvalidState() {
         runBlocking {
-            val repository = AuthRepository()
-            val result = repository.login("admin@example.com", "admin")
-            assertTrue(result.isSuccess, "Login for admin@example.com should succeed")
+            val manager = JvmOpaqueManager()
+            assertFailsWith<IllegalStateException> {
+                manager.finishLogin(
+                    password = "testPassword123",
+                    clientLoginState = "non_existent_state_id",
+                    loginResponse = "fake_login_response",
+                    email = "test@example.com",
+                    serverOrigin = "http://localhost",
+                )
+            }
         }
     }
+
+    @Test
+    fun testJvmOpaqueManagerFinishLoginInvalidResponse() {
+        runBlocking {
+            val manager = JvmOpaqueManager()
+            val startResult = manager.startLogin("testPassword123")
+
+            assertFailsWith<Throwable> {
+                manager.finishLogin(
+                    password = "testPassword123",
+                    clientLoginState = startResult.clientLoginState,
+                    loginResponse = "invalid_opaque_response_bytes",
+                    email = "test@example.com",
+                    serverOrigin = "http://localhost",
+                )
+            }
+        }
+    }
+
+
 }
