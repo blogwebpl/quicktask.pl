@@ -20,6 +20,8 @@ interface DPoPManager {
     fun clearKeyPair()
 }
 
+val sharedDPoPManager: DPoPManager by lazy { DefaultDPoPManager() }
+
 class DefaultDPoPManager(
     private val settings: Settings = createSettings(),
 ) : DPoPManager {
@@ -27,6 +29,7 @@ class DefaultDPoPManager(
     private val provider by lazy { getCryptographyProvider() }
     private var privateKey: ECDSA.PrivateKey? = null
     private var publicKeyRaw: ByteArray? = null
+    private var cachedPrivateKeyBase64: String? = null
 
     private suspend fun getOrGenerateKeyPair(): Pair<ECDSA.PrivateKey, ByteArray> {
         val savedPrivateKeyBase64 = settings.getStringOrNull(KEY_DPOP_PRIVATE_KEY)
@@ -35,9 +38,16 @@ class DefaultDPoPManager(
         if (savedPrivateKeyBase64.isNullOrBlank() || savedPublicKeyBase64.isNullOrBlank()) {
             privateKey = null
             publicKeyRaw = null
+            cachedPrivateKeyBase64 = null
         } else {
-            privateKey?.let { priv ->
-                publicKeyRaw?.let { raw -> return priv to raw }
+            if (savedPrivateKeyBase64 == cachedPrivateKeyBase64) {
+                privateKey?.let { priv ->
+                    publicKeyRaw?.let { raw -> return priv to raw }
+                }
+            } else {
+                privateKey = null
+                publicKeyRaw = null
+                cachedPrivateKeyBase64 = null
             }
 
             val ecdsa = provider.get(ECDSA)
@@ -54,6 +64,7 @@ class DefaultDPoPManager(
 
                 privateKey = restoredPrivateKey
                 publicKeyRaw = raw
+                cachedPrivateKeyBase64 = savedPrivateKeyBase64
 
                 return restoredPrivateKey to raw
             } catch (_: Exception) {
@@ -67,15 +78,19 @@ class DefaultDPoPManager(
         val publicKeyBytes = generatedPair.publicKey.encodeToByteArray(EC.PublicKey.Format.DER)
         val raw = generatedPair.publicKey.encodeToByteArray(EC.PublicKey.Format.RAW)
 
+        val privateKeyBase64 = privateKeyBytes.toBase64()
+        val publicKeyBase64 = publicKeyBytes.toBase64()
+
         try {
-            settings.putString(KEY_DPOP_PRIVATE_KEY, privateKeyBytes.toBase64())
-            settings.putString(KEY_DPOP_PUBLIC_KEY, publicKeyBytes.toBase64())
+            settings.putString(KEY_DPOP_PRIVATE_KEY, privateKeyBase64)
+            settings.putString(KEY_DPOP_PUBLIC_KEY, publicKeyBase64)
         } catch (_: Exception) {
             // Memory key pair will still function for current process lifetime if settings write fails
         }
 
         privateKey = generatedPair.privateKey
         publicKeyRaw = raw
+        cachedPrivateKeyBase64 = privateKeyBase64
 
         return generatedPair.privateKey to raw
     }
@@ -83,6 +98,7 @@ class DefaultDPoPManager(
     override fun clearKeyPair() {
         privateKey = null
         publicKeyRaw = null
+        cachedPrivateKeyBase64 = null
         settings.remove(KEY_DPOP_PRIVATE_KEY)
         settings.remove(KEY_DPOP_PUBLIC_KEY)
     }
@@ -95,8 +111,18 @@ class DefaultDPoPManager(
         val (privKey, rawPublic) = getOrGenerateKeyPair()
 
         // RAW format dla P-256 (65 bajtów): 0x04 || X (32 bajty) || Y (32 bajty)
-        val xBytes = if (rawPublic.size >= 65) rawPublic.copyOfRange(1, 33) else rawPublic
-        val yBytes = if (rawPublic.size >= 65) rawPublic.copyOfRange(33, 65) else rawPublic
+        val xBytes: ByteArray
+        val yBytes: ByteArray
+        if (rawPublic.size >= 65) {
+            xBytes = rawPublic.copyOfRange(1, 33)
+            yBytes = rawPublic.copyOfRange(33, 65)
+        } else if (rawPublic.size == 64) {
+            xBytes = rawPublic.copyOfRange(0, 32)
+            yBytes = rawPublic.copyOfRange(32, 64)
+        } else {
+            xBytes = rawPublic
+            yBytes = rawPublic
+        }
 
         val xBase64Url = xBytes.toBase64Url()
         val yBase64Url = yBytes.toBase64Url()
@@ -116,11 +142,12 @@ class DefaultDPoPManager(
 
         val nowSeconds = getTimeMillis() / 1000
         val jti = generateRandomJti()
+        val targetUrl = url.substringBefore('?').substringBefore('#')
 
         val payloadObj = buildJsonObject {
             put("jti", JsonPrimitive(jti))
             put("htm", JsonPrimitive(method.uppercase()))
-            put("htu", JsonPrimitive(url))
+            put("htu", JsonPrimitive(targetUrl))
             put("iat", JsonPrimitive(nowSeconds))
             if (!accessToken.isNullOrBlank()) {
                 val ath = provider.get(SHA256).hasher().hash(accessToken.encodeToByteArray()).toBase64Url()

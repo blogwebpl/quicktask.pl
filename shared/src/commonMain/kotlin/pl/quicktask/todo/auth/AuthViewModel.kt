@@ -23,11 +23,33 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val repository: AuthRepository = AuthRepository(),
+    private val repository: AuthRepository = sharedAuthRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AuthUiState(isLoggedIn = repository.isLoggedIn))
+    private val _uiState = MutableStateFlow(
+        AuthUiState(
+            isLoading = repository.isLoggedIn,
+            isLoggedIn = false,
+        ),
+    )
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+
+    init {
+        if (repository.isLoggedIn) {
+            viewModelScope.launch {
+                val restored = repository.tryRestoreCachedKeys()
+                if (restored) {
+                    _uiState.value = AuthUiState(isLoggedIn = true)
+                } else {
+                    repository.logout()
+                    _uiState.value = AuthUiState(
+                        isLoggedIn = false,
+                        errorMessage = "Klucze użytkownika są zablokowane. Zaloguj się ponownie, aby odblokować klucze.",
+                    )
+                }
+            }
+        }
+    }
 
     fun login(email: String, password: String) {
         if (_uiState.value.isLoading) return

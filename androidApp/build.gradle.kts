@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.core.splashscreen)
 
     debugImplementation(libs.compose.uiToolingPreview)

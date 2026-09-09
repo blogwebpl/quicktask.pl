@@ -14,12 +14,16 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import pl.quicktask.todo.auth.AuthRepository
 import pl.quicktask.todo.auth.DPoPManager
-import pl.quicktask.todo.auth.DefaultDPoPManager
+import pl.quicktask.todo.auth.sharedDPoPManager
 import pl.quicktask.todo.auth.KeyStore
+import pl.quicktask.todo.auth.UserKeyPair
 import pl.quicktask.todo.auth.SessionManager
 import pl.quicktask.todo.auth.createItemKey
 import pl.quicktask.todo.auth.decryptText
@@ -29,9 +33,11 @@ import pl.quicktask.todo.auth.wrapItemKey
 import pl.quicktask.todo.network.ApiConfig
 import pl.quicktask.todo.network.sharedHttpClient
 
+val sharedInboxRepository: InboxRepository by lazy { InboxRepository() }
+
 class InboxRepository(
     private val httpClient: HttpClient = sharedHttpClient,
-    private val dPoPManager: DPoPManager = DefaultDPoPManager(),
+    private val dPoPManager: DPoPManager = sharedDPoPManager,
     private val sessionManager: SessionManager = SessionManager(),
     private val authRepository: AuthRepository = AuthRepository(
         httpClient = httpClient,
@@ -78,8 +84,16 @@ class InboxRepository(
         return response
     }
 
+    private suspend fun getUserKeys(): UserKeyPair {
+        KeyStore.getSnapshot()?.let { return it }
+        if (authRepository.tryRestoreCachedKeys()) {
+            KeyStore.getSnapshot()?.let { return it }
+        }
+        return KeyStore.requireUserKeys()
+    }
+
     private suspend fun decryptInboxItem(dto: InboxItemDto): InboxItem {
-        val userKeys = KeyStore.requireUserKeys()
+        val userKeys = getUserKeys()
         val itemKey = unwrapItemKey(userKeys.privateKey, dto.encryptedItemKey)
 
         val title = decryptText(itemKey, dto.encryptedTitle)
@@ -124,7 +138,19 @@ class InboxRepository(
         )
     }
 
-    suspend fun getItems(): Result<List<InboxItem>> = withContext(Dispatchers.Default) {
+    private val _itemsFlow = MutableStateFlow<List<InboxItem>>(emptyList())
+    val itemsFlow: StateFlow<List<InboxItem>> = _itemsFlow.asStateFlow()
+
+    private var isCacheValid = false
+
+    fun invalidateCache() {
+        isCacheValid = false
+    }
+
+    suspend fun getItems(forceFetch: Boolean = false): Result<List<InboxItem>> = withContext(Dispatchers.Default) {
+        if (!forceFetch && isCacheValid) {
+            return@withContext Result.success(_itemsFlow.value)
+        }
         runCatching {
             val url = "${baseUrl.trimEnd('/')}/inbox"
 
@@ -141,7 +167,10 @@ class InboxRepository(
             }
 
             val dtos: List<InboxItemDto> = response.body()
-            dtos.map { decryptInboxItem(it) }
+            val items = dtos.map { decryptInboxItem(it) }
+            _itemsFlow.value = items
+            isCacheValid = true
+            items
         }
     }
 
@@ -173,7 +202,7 @@ class InboxRepository(
     ): Result<CreateInboxItemResponseDto> = withContext(Dispatchers.Default) {
         runCatching {
             require(files.size <= 10) { "Maksymalna liczba załączników to 10" }
-            val userKeys = KeyStore.requireUserKeys()
+            val userKeys = getUserKeys()
 
             val itemKey = createItemKey()
             val encryptedTitle = encryptText(itemKey, title)
@@ -216,6 +245,7 @@ class InboxRepository(
                     error("Błąd tworzenia wpisu (${response.status.value}): $errorText")
                 }
 
+                invalidateCache()
                 response.body()
             } catch (e: Exception) {
                 for (fileId in uploadedFileIds) {
@@ -285,6 +315,7 @@ class InboxRepository(
                 }
             }
 
+            invalidateCache()
             response.body()
         }
     }
@@ -304,6 +335,7 @@ class InboxRepository(
                 val errorText = response.bodyAsText()
                 error("Błąd serwera (${response.status.value}): $errorText")
             }
+            invalidateCache()
         }
     }
 
@@ -322,6 +354,7 @@ class InboxRepository(
                 val errorText = response.bodyAsText()
                 error("Błąd serwera (${response.status.value}): $errorText")
             }
+            invalidateCache()
         }
     }
 }

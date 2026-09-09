@@ -18,8 +18,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import pl.quicktask.todo.auth.AuthRepository
 import pl.quicktask.todo.auth.DPoPManager
-import pl.quicktask.todo.auth.DefaultDPoPManager
+import pl.quicktask.todo.auth.sharedDPoPManager
 import pl.quicktask.todo.auth.KeyStore
+import pl.quicktask.todo.auth.UserKeyPair
 import pl.quicktask.todo.auth.SessionManager
 import pl.quicktask.todo.auth.createItemKey
 import pl.quicktask.todo.auth.decryptBuffer
@@ -59,7 +60,7 @@ data class DecryptedFile(
 
 class FilesRepository(
     private val httpClient: HttpClient = sharedHttpClient,
-    private val dPoPManager: DPoPManager = DefaultDPoPManager(),
+    private val dPoPManager: DPoPManager = sharedDPoPManager,
     private val sessionManager: SessionManager = SessionManager(),
     private val authRepository: AuthRepository = AuthRepository(
         httpClient = httpClient,
@@ -99,13 +100,21 @@ class FilesRepository(
         return response
     }
 
+    private suspend fun getUserKeys(): UserKeyPair {
+        KeyStore.getSnapshot()?.let { return it }
+        if (authRepository.tryRestoreCachedKeys()) {
+            KeyStore.getSnapshot()?.let { return it }
+        }
+        return KeyStore.requireUserKeys()
+    }
+
     suspend fun uploadEncryptedFile(
         fileName: String,
         mimeType: String,
         fileBytes: ByteArray,
     ): Result<String> = withContext(Dispatchers.Default) {
         runCatching {
-            val userKeys = KeyStore.requireUserKeys()
+            val userKeys = getUserKeys()
 
             val fileKey = createItemKey()
             val ciphertext = encryptBuffer(fileKey, fileBytes)
@@ -164,7 +173,7 @@ class FilesRepository(
     suspend fun downloadEncryptedFile(fileId: String): Result<DecryptedFile> =
         withContext(Dispatchers.Default) {
             runCatching {
-                val userKeys = KeyStore.requireUserKeys()
+                val userKeys = getUserKeys()
 
                 val metaUrl = "${baseUrl.trimEnd('/')}/files/$fileId"
 

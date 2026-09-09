@@ -13,6 +13,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.util.date.getTimeMillis
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -20,9 +21,11 @@ import kotlinx.serialization.json.Json
 import pl.quicktask.todo.network.ApiConfig
 import pl.quicktask.todo.network.sharedHttpClient
 
-class AuthRepository(
+val sharedAuthRepository: AuthRepository by lazy { AuthRepository() }
+
+open class AuthRepository(
     private val httpClient: HttpClient = sharedHttpClient,
-    private val dPoPManager: DPoPManager = DefaultDPoPManager(),
+    private val dPoPManager: DPoPManager = sharedDPoPManager,
     private val opaqueManager: OpaqueManager = createOpaqueManager(),
     private val sessionManager: SessionManager = SessionManager(),
     private val keyCache: KeyCache = KeyCache(),
@@ -190,7 +193,7 @@ class AuthRepository(
         true
     }
 
-    suspend fun refreshSession(): Result<FinishLoginResponseDto> = withContext(Dispatchers.Default) {
+    open suspend fun refreshSession(): Result<FinishLoginResponseDto> = withContext(Dispatchers.Default) {
         refreshMutex.withLock {
             runCatching {
                 val currentRefreshToken = sessionManager.refreshToken
@@ -238,42 +241,30 @@ class AuthRepository(
         }
     }
 
-    suspend fun logout() = withContext(Dispatchers.Default) {
-        try {
-            var accessToken = sessionManager.accessToken
-            if (!accessToken.isNullOrBlank()) {
-                val url = "$baseUrl/auth/logout"
-                var dpopProof = dPoPManager.generateDPoPProof("POST", url, accessToken)
+    open suspend fun logout() = withContext(NonCancellable + Dispatchers.Default) {
+        val accessToken = sessionManager.accessToken
+        sessionManager.clearSession()
+        dPoPManager.clearKeyPair()
+        KeyStore.set(null)
+        keyCache.clearCachedUserKeys()
 
-                var response = httpClient.post(url) {
+        if (!accessToken.isNullOrBlank()) {
+            try {
+                val url = "$baseUrl/auth/logout"
+                val dpopProof = dPoPManager.generateDPoPProof("POST", url, accessToken)
+
+                val response = httpClient.post(url) {
                     header("Authorization", "DPoP $accessToken")
                     header("DPoP", dpopProof)
-                }
-
-                if (response.status.value == 498) {
-                    val refreshed = refreshSession().getOrNull()
-                    if (refreshed != null) {
-                        accessToken = refreshed.accessToken
-                        dpopProof = dPoPManager.generateDPoPProof("POST", url, accessToken)
-                        response = httpClient.post(url) {
-                            header("Authorization", "DPoP $accessToken")
-                            header("DPoP", dpopProof)
-                        }
-                    }
                 }
 
                 if (!response.status.isSuccess()) {
                     val errorText = response.bodyAsText()
                     println("Błąd wylogowania (${response.status.value}): $errorText")
                 }
+            } catch (e: Throwable) {
+                println("Wyjątek podczas wylogowania: ${e.message}")
             }
-        } catch (e: Exception) {
-            println("Wyjątek podczas wylogowania: ${e.message}")
-        } finally {
-            sessionManager.clearSession()
-            dPoPManager.clearKeyPair()
-            KeyStore.set(null)
-            keyCache.clearCachedUserKeys()
         }
     }
 

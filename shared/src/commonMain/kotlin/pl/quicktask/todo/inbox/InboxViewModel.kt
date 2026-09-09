@@ -16,20 +16,25 @@ data class InboxUiState(
 )
 
 class InboxViewModel(
-    private val repository: InboxRepository = InboxRepository(),
+    private val repository: InboxRepository = sharedInboxRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InboxUiState())
     val uiState: StateFlow<InboxUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            repository.itemsFlow.collect { items ->
+                _uiState.value = _uiState.value.copy(items = items)
+            }
+        }
         loadItems()
     }
 
     fun loadItems() {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
-            val result = repository.getItems()
+            val result = repository.getItems(forceFetch = true)
             result.onSuccess { items ->
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

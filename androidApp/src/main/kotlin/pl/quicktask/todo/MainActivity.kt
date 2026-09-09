@@ -13,6 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import pl.quicktask.todo.auth.AppContext
+import pl.quicktask.todo.sync.SyncLifecycleObserver
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         AppContext.applicationContext = applicationContext
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(SyncLifecycleObserver())
 
         setContent {
             val view = LocalView.current

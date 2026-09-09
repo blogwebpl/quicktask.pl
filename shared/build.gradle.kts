@@ -55,6 +55,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.process)
             implementation(libs.cryptography.provider.jdk)
             implementation(libs.androidx.security.crypto)
             implementation(libs.multiplatformSettings)
@@ -81,6 +82,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
         }
         jsMain.dependencies {
             implementation(libs.wrappers.browser)

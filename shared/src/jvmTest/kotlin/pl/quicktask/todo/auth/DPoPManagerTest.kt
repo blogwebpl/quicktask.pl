@@ -155,4 +155,35 @@ class DPoPManagerTest {
             "After clearing key pair, a new key pair should be generated",
         )
     }
+
+    @Test
+    fun testKeyPairUpdatedAcrossInstancesWhenClearedAndRegenerated() = runBlocking {
+        val manager1 = DefaultDPoPManager()
+        val manager2 = DefaultDPoPManager()
+
+        val proof1 = manager1.generateDPoPProof("GET", "https://api.example.com/1")
+        val proof2 = manager2.generateDPoPProof("GET", "https://api.example.com/2")
+
+        val header1 = Json.parseToJsonElement(decodeBase64Url(proof1.split(".")[0])).jsonObject
+        val header2 = Json.parseToJsonElement(decodeBase64Url(proof2.split(".")[0])).jsonObject
+
+        assertEquals(
+            header1["jwk"]?.jsonObject?.get("x")?.jsonPrimitive?.content,
+            header2["jwk"]?.jsonObject?.get("x")?.jsonPrimitive?.content,
+            "Initial keys should match across instances",
+        )
+
+        manager1.clearKeyPair()
+        val proof1New = manager1.generateDPoPProof("GET", "https://api.example.com/1")
+        val header1New = Json.parseToJsonElement(decodeBase64Url(proof1New.split(".")[0])).jsonObject
+
+        val proof2New = manager2.generateDPoPProof("GET", "https://api.example.com/2")
+        val header2New = Json.parseToJsonElement(decodeBase64Url(proof2New.split(".")[0])).jsonObject
+
+        assertEquals(
+            header1New["jwk"]?.jsonObject?.get("x")?.jsonPrimitive?.content,
+            header2New["jwk"]?.jsonObject?.get("x")?.jsonPrimitive?.content,
+            "Manager 2 must update its in-memory key pair when settings key changes",
+        )
+    }
 }
