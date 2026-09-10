@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -26,7 +27,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -46,6 +49,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.app_name
+import todo.shared.generated.resources.ic_attach_file
+import todo.shared.generated.resources.ic_close
 import todo.shared.generated.resources.ic_menu
 import todo.shared.generated.resources.menu
 import todo.shared.generated.resources.screen_inbox
@@ -157,8 +162,13 @@ fun InboxScreen(
     if (uiState.showAddDialog) {
         AddInboxItemDialog(
             isSubmitting = uiState.isSubmitting,
+            selectedFiles = uiState.selectedFiles,
+            uploadProgress = uiState.uploadProgress,
+            onAddFile = { file -> viewModel.addSelectedFile(file) },
+            onRemoveFile = { index -> viewModel.removeSelectedFile(index) },
             onDismiss = { viewModel.dismissAddDialog() },
-        ) { title, note -> viewModel.addItem(title, note) }
+            onConfirm = { title, note -> viewModel.addItem(title, note) },
+        )
     }
 }
 
@@ -191,6 +201,24 @@ private fun InboxItemCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (item.attachments.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_attach_file),
+                            contentDescription = "Załączniki",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "${item.attachments.size} załącznik(i): " + item.attachments.joinToString { it.name },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
 
             IconButton(onClick = onDelete) {
@@ -207,11 +235,19 @@ private fun InboxItemCard(
 @Composable
 private fun AddInboxItemDialog(
     isSubmitting: Boolean,
+    selectedFiles: List<InputFile>,
+    uploadProgress: Float? = null,
+    onAddFile: (InputFile) -> Unit,
+    onRemoveFile: (Int) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: (title: String, note: String) -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+
+    val launchFilePicker = rememberFilePicker { pickedFile ->
+        pickedFile?.let { onAddFile(it) }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -239,6 +275,90 @@ private fun AddInboxItemDialog(
                     enabled = !isSubmitting,
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                if (selectedFiles.isNotEmpty()) {
+                    Text(
+                        text = "Załączniki (${selectedFiles.size}/10):",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        selectedFiles.forEachIndexed { index, file ->
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "${file.fileName} (${formatFileSize(file.bytes.size.toLong())})",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    IconButton(
+                                        onClick = { onRemoveFile(index) },
+                                        enabled = !isSubmitting,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(Res.drawable.ic_close),
+                                            contentDescription = "Usuń plik",
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isSubmitting) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        val progressText = if (uploadProgress != null) {
+                            "Wysyłanie plików: ${(uploadProgress * 100).toInt()}%"
+                        } else {
+                            "Zapisywanie zadania..."
+                        }
+                        Text(
+                            text = progressText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        if (uploadProgress != null) {
+                            LinearProgressIndicator(
+                                progress = { uploadProgress.coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = launchFilePicker,
+                    enabled = !isSubmitting && selectedFiles.size < 10,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_attach_file),
+                        contentDescription = "Dołącz plik",
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Dodaj plik załącznika")
+                }
             }
         },
         confirmButton = {
@@ -265,4 +385,12 @@ private fun AddInboxItemDialog(
             }
         },
     )
+}
+
+private fun formatFileSize(sizeInBytes: Long): String {
+    return when {
+        sizeInBytes < 1024 -> "$sizeInBytes B"
+        sizeInBytes < 1024 * 1024 -> "${sizeInBytes / 1024} KB"
+        else -> "${sizeInBytes / (1024 * 1024)} MB"
+    }
 }

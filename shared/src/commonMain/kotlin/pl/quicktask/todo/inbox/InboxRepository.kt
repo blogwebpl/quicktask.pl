@@ -199,6 +199,7 @@ class InboxRepository(
         title: String,
         note: String,
         files: List<InputFile> = emptyList(),
+        onProgress: ((Float) -> Unit)? = null,
     ): Result<CreateInboxItemResponseDto> = withContext(Dispatchers.Default) {
         runCatching {
             require(files.size <= 10) { "Maksymalna liczba załączników to 10" }
@@ -212,14 +213,24 @@ class InboxRepository(
             val uploadedFileIds = mutableListOf<String>()
 
             try {
-                for (file in files) {
+                val totalFiles = files.size
+                files.forEachIndexed { index, file ->
                     val uploadResult = filesRepository.uploadEncryptedFile(
                         fileName = file.fileName,
                         mimeType = file.mimeType,
                         fileBytes = file.bytes,
+                        onProgress = { fileProgress ->
+                            if (totalFiles > 0 && onProgress != null) {
+                                val overallProgress = (index.toFloat() + fileProgress) / totalFiles.toFloat()
+                                onProgress(overallProgress)
+                            }
+                        },
                     )
                     val fileId = uploadResult.getOrThrow()
                     uploadedFileIds.add(fileId)
+                }
+                if (totalFiles > 0) {
+                    onProgress?.invoke(1.0f)
                 }
 
                 val url = "${baseUrl.trimEnd('/')}/inbox"

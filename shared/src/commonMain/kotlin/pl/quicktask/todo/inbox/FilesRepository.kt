@@ -2,6 +2,8 @@ package pl.quicktask.todo.inbox
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.onUpload
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -58,6 +60,8 @@ data class DecryptedFile(
     val content: ByteArray,
 )
 
+private const val FILE_TIMEOUT_MS = 600_000L // 10 minut
+
 class FilesRepository(
     private val httpClient: HttpClient = sharedHttpClient,
     private val dPoPManager: DPoPManager = sharedDPoPManager,
@@ -112,6 +116,7 @@ class FilesRepository(
         fileName: String,
         mimeType: String,
         fileBytes: ByteArray,
+        onProgress: ((Float) -> Unit)? = null,
     ): Result<String> = withContext(Dispatchers.Default) {
         runCatching {
             val userKeys = getUserKeys()
@@ -130,6 +135,19 @@ class FilesRepository(
 
             val response = executeAuthenticated("POST", url) { accessToken, dpopProof ->
                 httpClient.post(url) {
+                    timeout {
+                        requestTimeoutMillis = FILE_TIMEOUT_MS
+                        socketTimeoutMillis = FILE_TIMEOUT_MS
+                    }
+                    if (onProgress != null) {
+                        onUpload { bytesSentTotal, contentLength ->
+                            val total = contentLength ?: ciphertext.size.toLong()
+                            if (total > 0) {
+                                val progress = (bytesSentTotal.toDouble() / total.toDouble()).coerceIn(0.0, 1.0).toFloat()
+                                onProgress(progress)
+                            }
+                        }
+                    }
                     contentType(ContentType.Application.OctetStream)
                     header("Authorization", "DPoP $accessToken")
                     header("DPoP", dpopProof)
@@ -199,6 +217,10 @@ class FilesRepository(
 
                 val contentResponse = executeAuthenticated("GET", contentUrl) { accessToken, dpopProof ->
                     httpClient.get(contentUrl) {
+                        timeout {
+                            requestTimeoutMillis = FILE_TIMEOUT_MS
+                            socketTimeoutMillis = FILE_TIMEOUT_MS
+                        }
                         header("Authorization", "DPoP $accessToken")
                         header("DPoP", dpopProof)
                     }

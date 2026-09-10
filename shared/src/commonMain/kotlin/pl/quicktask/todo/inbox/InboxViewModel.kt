@@ -13,6 +13,8 @@ data class InboxUiState(
     val errorMessage: String? = null,
     val showAddDialog: Boolean = false,
     val isSubmitting: Boolean = false,
+    val selectedFiles: List<InputFile> = emptyList(),
+    val uploadProgress: Float? = null,
 )
 
 class InboxViewModel(
@@ -50,27 +52,58 @@ class InboxViewModel(
     }
 
     fun openAddDialog() {
-        _uiState.value = _uiState.value.copy(showAddDialog = true)
+        _uiState.value = _uiState.value.copy(showAddDialog = true, selectedFiles = emptyList(), uploadProgress = null)
     }
 
     fun dismissAddDialog() {
-        _uiState.value = _uiState.value.copy(showAddDialog = false)
+        _uiState.value = _uiState.value.copy(showAddDialog = false, selectedFiles = emptyList(), uploadProgress = null)
+    }
+
+    fun addSelectedFile(file: InputFile) {
+        val currentFiles = _uiState.value.selectedFiles
+        if (currentFiles.size >= 10) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Maksymalna liczba załączników to 10")
+            return
+        }
+        _uiState.value = _uiState.value.copy(selectedFiles = currentFiles + file)
+    }
+
+    fun removeSelectedFile(index: Int) {
+        val currentFiles = _uiState.value.selectedFiles.toMutableList()
+        if (index in currentFiles.indices) {
+            currentFiles.removeAt(index)
+            _uiState.value = _uiState.value.copy(selectedFiles = currentFiles)
+        }
     }
 
     fun addItem(title: String, note: String) {
         if (title.isBlank()) return
-        _uiState.value = _uiState.value.copy(isSubmitting = true)
+        val filesToUpload = _uiState.value.selectedFiles
+        _uiState.value = _uiState.value.copy(
+            isSubmitting = true,
+            uploadProgress = if (filesToUpload.isNotEmpty()) 0f else null,
+        )
         viewModelScope.launch {
-            val result = repository.createInboxItem(title = title, note = note)
+            val result = repository.createInboxItem(
+                title = title,
+                note = note,
+                files = filesToUpload,
+                onProgress = { progress ->
+                    _uiState.value = _uiState.value.copy(uploadProgress = progress)
+                },
+            )
             result.onSuccess {
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     showAddDialog = false,
+                    selectedFiles = emptyList(),
+                    uploadProgress = null,
                 )
                 loadItems()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
+                    uploadProgress = null,
                     errorMessage = error.message ?: "Błąd dodawania elementu",
                 )
             }

@@ -14,9 +14,9 @@ val sharedHttpClient: HttpClient by lazy {
 fun createHttpClient(): HttpClient {
     return HttpClient {
         install(HttpTimeout) {
-            requestTimeoutMillis = 15_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 15_000
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 15_000
+            socketTimeoutMillis = 30_000
         }
         install(HttpRequestRetry) {
             maxRetries = 3
