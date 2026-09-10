@@ -2,6 +2,8 @@ package pl.quicktask.todo.inbox
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +20,11 @@ data class InboxUiState(
     val isSubmitting: Boolean = false,
     val selectedFiles: List<InputFile> = emptyList(),
     val uploadProgress: Float? = null,
+    val activeTwoMinuteItem: InboxItem? = null,
+    val twoMinuteSecondsRemaining: Int = 120,
+    val isCompletingTwoMinuteItem: Boolean = false,
+    val showDeleteAttachmentPrompt: Boolean = false,
+    val itemToDelete: InboxItem? = null,
 )
 
 class InboxViewModel(
@@ -163,6 +170,29 @@ class InboxViewModel(
         }
     }
 
+    fun requestDeleteItem(item: InboxItem) {
+        _uiState.value = _uiState.value.copy(itemToDelete = item)
+    }
+
+    fun confirmDeleteItem() {
+        val item = _uiState.value.itemToDelete ?: return
+        _uiState.value = _uiState.value.copy(itemToDelete = null)
+        viewModelScope.launch {
+            val result = repository.deleteItem(item.itemId)
+            result.onSuccess {
+                loadItems()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.message ?: "Błąd usuwania elementu",
+                )
+            }
+        }
+    }
+
+    fun cancelDeleteItem() {
+        _uiState.value = _uiState.value.copy(itemToDelete = null)
+    }
+
     fun deleteItem(itemId: String) {
         viewModelScope.launch {
             val result = repository.deleteItem(itemId)
@@ -178,5 +208,80 @@ class InboxViewModel(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    private var timerJob: Job? = null
+
+    fun startTwoMinuteTimer(item: InboxItem) {
+        timerJob?.cancel()
+        _uiState.value = _uiState.value.copy(
+            activeTwoMinuteItem = item,
+            twoMinuteSecondsRemaining = 120,
+            isCompletingTwoMinuteItem = false,
+            showDeleteAttachmentPrompt = false,
+        )
+        timerJob = viewModelScope.launch {
+            while (_uiState.value.twoMinuteSecondsRemaining > 0) {
+                delay(1000L)
+                _uiState.value = _uiState.value.copy(
+                    twoMinuteSecondsRemaining = _uiState.value.twoMinuteSecondsRemaining - 1,
+                )
+            }
+        }
+    }
+
+    fun cancelTwoMinuteTimer() {
+        timerJob?.cancel()
+        timerJob = null
+        _uiState.value = _uiState.value.copy(
+            activeTwoMinuteItem = null,
+            twoMinuteSecondsRemaining = 120,
+            isCompletingTwoMinuteItem = false,
+            showDeleteAttachmentPrompt = false,
+        )
+    }
+
+    fun onTwoMinuteDoneClicked() {
+        val item = _uiState.value.activeTwoMinuteItem ?: return
+        if (item.attachments.isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(showDeleteAttachmentPrompt = true)
+        } else {
+            completeTwoMinuteTimer(deleteAttachments = false)
+        }
+    }
+
+    fun confirmCompleteTwoMinuteTimer(deleteAttachments: Boolean) {
+        _uiState.value = _uiState.value.copy(showDeleteAttachmentPrompt = false)
+        completeTwoMinuteTimer(deleteAttachments = deleteAttachments)
+    }
+
+    fun dismissDeleteAttachmentPrompt() {
+        _uiState.value = _uiState.value.copy(showDeleteAttachmentPrompt = false)
+    }
+
+    fun completeTwoMinuteTimer(deleteAttachments: Boolean = false) {
+        val item = _uiState.value.activeTwoMinuteItem ?: return
+        timerJob?.cancel()
+        timerJob = null
+        _uiState.value = _uiState.value.copy(
+            isCompletingTwoMinuteItem = true,
+            showDeleteAttachmentPrompt = false,
+        )
+        viewModelScope.launch {
+            val result = repository.completeInTwoMinutes(item.itemId, deleteAttachments = deleteAttachments)
+            result.onSuccess {
+                _uiState.value = _uiState.value.copy(
+                    activeTwoMinuteItem = null,
+                    isCompletingTwoMinuteItem = false,
+                    showDeleteAttachmentPrompt = false,
+                )
+                loadItems()
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isCompletingTwoMinuteItem = false,
+                    errorMessage = error.message ?: "Błąd oznaczania elementu jako wykonanego w 2 minuty",
+                )
+            }
+        }
     }
 }

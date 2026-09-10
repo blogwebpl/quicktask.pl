@@ -1,5 +1,7 @@
 package pl.quicktask.todo.inbox
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,12 +22,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -49,6 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -56,12 +64,43 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import pl.quicktask.todo.ui.components.AppConfirmationDialog
+import pl.quicktask.todo.ui.components.DialogButton
+import pl.quicktask.todo.ui.components.DialogButtonStyle
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.app_name
+import todo.shared.generated.resources.dialog_delete_attachments_confirm
+import todo.shared.generated.resources.dialog_delete_attachments_question
+import todo.shared.generated.resources.dialog_delete_attachments_title
+import todo.shared.generated.resources.dialog_delete_confirm
+import todo.shared.generated.resources.dialog_delete_item_question
+import todo.shared.generated.resources.dialog_delete_item_title
+import todo.shared.generated.resources.dialog_keep_attachments
 import todo.shared.generated.resources.ic_attach_file
+import todo.shared.generated.resources.ic_book
+import todo.shared.generated.resources.ic_check_circle
+import todo.shared.generated.resources.ic_date_range
+import todo.shared.generated.resources.timer_cancel
+import todo.shared.generated.resources.timer_done
+import todo.shared.generated.resources.timer_title
+import todo.shared.generated.resources.ic_delete
+import todo.shared.generated.resources.ic_hourglass_empty
+import todo.shared.generated.resources.ic_list
 import todo.shared.generated.resources.ic_menu
+import todo.shared.generated.resources.ic_play_arrow
+import todo.shared.generated.resources.ic_process
+import todo.shared.generated.resources.ic_star
 import todo.shared.generated.resources.menu
+import todo.shared.generated.resources.process_do_2min
+import todo.shared.generated.resources.process_item
 import todo.shared.generated.resources.screen_inbox
+import todo.shared.generated.resources.screen_next_actions
+import todo.shared.generated.resources.screen_projects
+import todo.shared.generated.resources.screen_reference
+import todo.shared.generated.resources.screen_scheduled
+import todo.shared.generated.resources.screen_someday
+import todo.shared.generated.resources.screen_trash
+import todo.shared.generated.resources.screen_waiting
 import todo.shared.generated.resources.task_add_attachment
 import todo.shared.generated.resources.task_add_button
 import todo.shared.generated.resources.task_attachments_label
@@ -143,7 +182,18 @@ fun InboxScreen(
                             InboxItemCard(
                                 item = item,
                                 onClick = { viewModel.openEditDialog(item) },
-                                onDelete = { viewModel.deleteItem(item.itemId) },
+                                onDelete = { viewModel.requestDeleteItem(item) },
+                                onProcess = { destination ->
+                                    // Obsługa wybranego przeznaczenia GTD
+                                    when (destination) {
+                                        ProcessDestination.TWO_MINUTES -> {
+                                            viewModel.startTwoMinuteTimer(item)
+                                        }
+                                        else -> {
+                                            // Pozostałe kategorie
+                                        }
+                                    }
+                                },
                             )
                         }
                     }
@@ -195,6 +245,65 @@ fun InboxScreen(
             onConfirm = { title, note -> viewModel.addItem(title, note) },
         )
     }
+
+    if (uiState.activeTwoMinuteItem != null) {
+        TwoMinuteTimerDialog(
+            item = uiState.activeTwoMinuteItem!!,
+            remainingSeconds = uiState.twoMinuteSecondsRemaining,
+            isSubmitting = uiState.isCompletingTwoMinuteItem,
+            onCancel = { viewModel.cancelTwoMinuteTimer() },
+            onDone = { viewModel.onTwoMinuteDoneClicked() },
+        )
+    }
+
+    // Okno dialogowe pytające o usunięcie załącznika przy kliknięciu "Zrobione"
+    if (uiState.showDeleteAttachmentPrompt && uiState.activeTwoMinuteItem != null) {
+        AppConfirmationDialog(
+            title = stringResource(Res.string.dialog_delete_attachments_title),
+            text = stringResource(Res.string.dialog_delete_attachments_question),
+            iconPainter = painterResource(Res.drawable.ic_attach_file),
+            buttons = listOf(
+                DialogButton(
+                    text = stringResource(Res.string.dialog_delete_attachments_confirm),
+                    onClick = { viewModel.confirmCompleteTwoMinuteTimer(deleteAttachments = true) },
+                    style = DialogButtonStyle.DESTRUCTIVE,
+                ),
+                DialogButton(
+                    text = stringResource(Res.string.dialog_keep_attachments),
+                    onClick = { viewModel.confirmCompleteTwoMinuteTimer(deleteAttachments = false) },
+                    style = DialogButtonStyle.SECONDARY,
+                ),
+                DialogButton(
+                    text = stringResource(Res.string.timer_cancel),
+                    onClick = { viewModel.dismissDeleteAttachmentPrompt() },
+                    style = DialogButtonStyle.TEXT,
+                ),
+            ),
+            onDismissRequest = { viewModel.dismissDeleteAttachmentPrompt() },
+        )
+    }
+
+    // Okno dialogowe potwierdzające usunięcie zadania
+    if (uiState.itemToDelete != null) {
+        AppConfirmationDialog(
+            title = stringResource(Res.string.dialog_delete_item_title),
+            text = stringResource(Res.string.dialog_delete_item_question, uiState.itemToDelete!!.title),
+            iconPainter = painterResource(Res.drawable.ic_delete),
+            buttons = listOf(
+                DialogButton(
+                    text = stringResource(Res.string.dialog_delete_confirm),
+                    onClick = { viewModel.confirmDeleteItem() },
+                    style = DialogButtonStyle.DESTRUCTIVE,
+                ),
+                DialogButton(
+                    text = stringResource(Res.string.timer_cancel),
+                    onClick = { viewModel.cancelDeleteItem() },
+                    style = DialogButtonStyle.TEXT,
+                ),
+            ),
+            onDismissRequest = { viewModel.cancelDeleteItem() },
+        )
+    }
 }
 
 @Composable
@@ -202,7 +311,10 @@ private fun InboxItemCard(
     item: InboxItem,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    onProcess: (ProcessDestination) -> Unit = {},
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -249,12 +361,147 @@ private fun InboxItemCard(
                 }
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_process),
+                        contentDescription = stringResource(Res.string.process_item),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    // 1. Zrób w 2 minuty (Do it in 2 minutes)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.process_do_2min)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_check_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.TWO_MINUTES)
+                        },
+                    )
+
+                    HorizontalDivider()
+
+                    // 2. Następne działanie (Next Action)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_next_actions)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_play_arrow),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.NEXT_ACTION)
+                        },
+                    )
+
+                    // 3. Projekt (Project)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_projects)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_list),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.PROJECT)
+                        },
+                    )
+
+                    // 4. Oczekujące (Waiting)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_waiting)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_hourglass_empty),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.WAITING)
+                        },
+                    )
+
+                    // 5. Zaplanowane (Scheduled)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_scheduled)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_date_range),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.SCHEDULED)
+                        },
+                    )
+
+                    HorizontalDivider()
+
+                    // 6. Kiedyś / Może (Someday/Maybe)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_someday)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_star),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.SOMEDAY)
+                        },
+                    )
+
+                    // 7. Materiały / Referencje (Reference)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_reference)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_book),
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onProcess(ProcessDestination.REFERENCE)
+                        },
+                    )
+
+                    HorizontalDivider()
+
+                    // 8. Usuń (Delete)
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.screen_trash)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_delete),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        },
+                    )
+                }
             }
         }
     }
@@ -274,7 +521,15 @@ private fun InboxItemDialog(
     onDismiss: () -> Unit,
     onConfirm: (title: String, note: String) -> Unit,
 ) {
-    var title by remember(itemToEdit) { mutableStateOf(itemToEdit?.title ?: "") }
+    var titleTextFieldValue by remember(itemToEdit) {
+        val initialText = itemToEdit?.title ?: ""
+        mutableStateOf(
+            TextFieldValue(
+                text = initialText,
+                selection = TextRange(initialText.length),
+            ),
+        )
+    }
     var note by remember(itemToEdit) { mutableStateOf(itemToEdit?.note ?: "") }
 
     val focusRequester = remember { FocusRequester() }
@@ -296,9 +551,9 @@ private fun InboxItemDialog(
                 TaskTopBar(
                     isEditing = itemToEdit != null,
                     isSubmitting = isSubmitting,
-                    canSave = title.isNotBlank(),
+                    canSave = titleTextFieldValue.text.isNotBlank(),
                     onDismiss = onDismiss,
-                    onSave = { onConfirm(title, note) },
+                    onSave = { onConfirm(titleTextFieldValue.text, note) },
                 )
             },
         ) { paddingValues ->
@@ -311,8 +566,8 @@ private fun InboxItemDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 TitleTextField(
-                    value = title,
-                    onValueChange = { title = it },
+                    value = titleTextFieldValue,
+                    onValueChange = { titleTextFieldValue = it },
                     enabled = !isSubmitting,
                     focusRequester = focusRequester,
                 )
@@ -390,15 +645,23 @@ private fun TaskTopBar(
             }
         },
         actions = {
-            TextButton(onClick = onSave, enabled = canSave && !isSubmitting) {
+            Button(
+                onClick = onSave,
+                enabled = canSave && !isSubmitting,
+                modifier = Modifier.padding(end = 8.dp),
+            ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
                     val buttonRes = if (isEditing) Res.string.task_save_button else Res.string.task_add_button
-                    Text(stringResource(buttonRes))
+                    Text(
+                        text = stringResource(buttonRes),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    )
                 }
             }
         },
@@ -407,15 +670,21 @@ private fun TaskTopBar(
 
 @Composable
 private fun TitleTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     enabled: Boolean,
     focusRequester: FocusRequester,
 ) {
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(stringResource(Res.string.task_title_placeholder)) },
+        placeholder = {
+            Text(
+                text = stringResource(Res.string.task_title_placeholder),
+                style = MaterialTheme.typography.titleLarge,
+            )
+        },
+        textStyle = MaterialTheme.typography.titleLarge,
         singleLine = true,
         enabled = enabled,
         colors = TextFieldDefaults.colors(
@@ -543,5 +812,152 @@ private fun formatFileSize(sizeInBytes: Long): String {
         sizeInBytes < 1024 -> "$sizeInBytes B"
         sizeInBytes < 1024 * 1024 -> "${sizeInBytes / 1024} KB"
         else -> "${sizeInBytes / (1024 * 1024)} MB"
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TwoMinuteTimerDialog(
+    item: InboxItem,
+    remainingSeconds: Int,
+    isSubmitting: Boolean,
+    onCancel: () -> Unit,
+    onDone: () -> Unit,
+) {
+    val progress = (remainingSeconds.toFloat() / 120f).coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 500),
+    )
+
+    val minutes = remainingSeconds / 60
+    val seconds = remainingSeconds % 60
+    val timeFormatted = "${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
+
+    Dialog(
+        onDismissRequest = {
+            if (!isSubmitting) {
+                onCancel()
+            }
+        },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(Res.string.timer_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = onCancel, enabled = !isSubmitting) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(Res.string.timer_cancel),
+                            )
+                        }
+                    },
+                )
+            },
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (item.note.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = item.note,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.size(260.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeWidth = 14.dp,
+                    )
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = timeFormatted,
+                            style = MaterialTheme.typography.displayLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "pozostało",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onCancel,
+                        enabled = !isSubmitting,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.timer_cancel),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+
+                    Button(
+                        onClick = onDone,
+                        enabled = !isSubmitting,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(Res.string.timer_done),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

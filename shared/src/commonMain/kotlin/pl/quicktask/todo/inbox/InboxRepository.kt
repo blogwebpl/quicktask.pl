@@ -402,4 +402,127 @@ class InboxRepository(
             invalidateCache()
         }
     }
+
+    suspend fun completeInTwoMinutes(itemId: String, deleteAttachments: Boolean = false): Result<Unit> = withContext(Dispatchers.Default) {
+        runCatching {
+            val url = "${baseUrl.trimEnd('/')}/inbox/$itemId/complete-in-two-minutes"
+
+            val response = executeAuthenticated("POST", url) { token, dpop ->
+                httpClient.post(url) {
+                    contentType(ContentType.Application.Json)
+                    header("Authorization", "DPoP $token")
+                    header("DPoP", dpop)
+                    setBody(CompleteInTwoMinutesRequestDto(deleteAttachments = deleteAttachments))
+                }
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                error("Błąd serwera (${response.status.value}): $errorText")
+            }
+            invalidateCache()
+        }
+    }
+
+    suspend fun getCompletedInTwoMinutes(): Result<List<CompletedInTwoMinutesItem>> = withContext(Dispatchers.Default) {
+        runCatching {
+            val url = "${baseUrl.trimEnd('/')}/inbox/completed-in-two-minutes"
+
+            val response = executeAuthenticated("GET", url) { token, dpop ->
+                httpClient.get(url) {
+                    header("Authorization", "DPoP $token")
+                    header("DPoP", dpop)
+                }
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                error("Błąd serwera (${response.status.value}): $errorText")
+            }
+
+            val dtos: List<CompletedInTwoMinutesItemDto> = response.body()
+            val userKeys = getUserKeys()
+            dtos.map { dto ->
+                val itemKey = unwrapItemKey(userKeys.privateKey, dto.encryptedItemKey)
+                val title = decryptText(itemKey, dto.encryptedTitle)
+                val note = if (!dto.encryptedNote.isNullOrBlank()) {
+                    decryptText(itemKey, dto.encryptedNote)
+                } else {
+                    ""
+                }
+                val decryptedAttachments = dto.attachments.map { att ->
+                    val fileKey = unwrapItemKey(userKeys.privateKey, att.encryptedFileKey)
+                    var name = "załącznik"
+                    var type = ""
+                    try {
+                        val metadataJson = decryptText(fileKey, att.encryptedMetadata)
+                        val meta = json.decodeFromString(FileMetadataDto.serializer(), metadataJson)
+                        name = meta.name
+                        type = meta.type
+                    } catch (_: Exception) {
+                        name = "Nie można odszyfrować załącznika"
+                    }
+
+                    DecryptedAttachment(
+                        attachmentId = att.attachmentId,
+                        fileId = att.fileId,
+                        name = name,
+                        type = type,
+                        ciphertextSha256 = att.ciphertextSha256,
+                        fileKey = fileKey,
+                    )
+                }
+
+                CompletedInTwoMinutesItem(
+                    itemId = dto.itemId,
+                    title = title,
+                    note = note,
+                    itemKey = itemKey,
+                    createdAt = dto.createdAt,
+                    updatedAt = dto.updatedAt,
+                    processedAt = dto.processedAt,
+                    attachments = decryptedAttachments,
+                    tags = dto.tags,
+                )
+            }
+        }
+    }
+
+    suspend fun restoreFromTwoMinutes(itemId: String): Result<Unit> = withContext(Dispatchers.Default) {
+        runCatching {
+            val url = "${baseUrl.trimEnd('/')}/inbox/$itemId/restore-from-two-minutes"
+
+            val response = executeAuthenticated("POST", url) { token, dpop ->
+                httpClient.post(url) {
+                    header("Authorization", "DPoP $token")
+                    header("DPoP", dpop)
+                }
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                error("Błąd serwera (${response.status.value}): $errorText")
+            }
+            invalidateCache()
+        }
+    }
+
+    suspend fun deleteCompletedInTwoMinutes(itemId: String): Result<Unit> = withContext(Dispatchers.Default) {
+        runCatching {
+            val url = "${baseUrl.trimEnd('/')}/inbox/$itemId/completed-in-two-minutes"
+
+            val response = executeAuthenticated("DELETE", url) { token, dpop ->
+                httpClient.delete(url) {
+                    header("Authorization", "DPoP $token")
+                    header("DPoP", dpop)
+                }
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                error("Błąd serwera (${response.status.value}): $errorText")
+            }
+            invalidateCache()
+        }
+    }
 }

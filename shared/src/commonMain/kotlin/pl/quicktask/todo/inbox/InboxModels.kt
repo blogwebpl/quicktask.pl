@@ -58,6 +58,24 @@ data class UpdateInboxItemResponseDto(
     val updatedAt: String,
 )
 
+@Serializable
+data class CompleteInTwoMinutesRequestDto(
+    val deleteAttachments: Boolean,
+)
+
+@Serializable
+data class CompletedInTwoMinutesItemDto(
+    val itemId: String,
+    val encryptedTitle: String,
+    val encryptedNote: String? = null,
+    val encryptedItemKey: String,
+    val createdAt: String,
+    val updatedAt: String,
+    val processedAt: String,
+    val attachments: List<InboxAttachmentDto> = emptyList(),
+    val tags: List<InboxTagDto> = emptyList(),
+)
+
 data class DecryptedAttachment(
     val attachmentId: String,
     val fileId: String,
@@ -77,6 +95,28 @@ data class InboxItem(
     val attachments: List<DecryptedAttachment> = emptyList(),
     val tags: List<InboxTagDto> = emptyList(),
 )
+
+data class CompletedInTwoMinutesItem(
+    val itemId: String,
+    val title: String,
+    val note: String,
+    val itemKey: AES.GCM.Key,
+    val createdAt: String,
+    val updatedAt: String,
+    val processedAt: String,
+    val attachments: List<DecryptedAttachment> = emptyList(),
+    val tags: List<InboxTagDto> = emptyList(),
+)
+
+enum class ProcessDestination {
+    TWO_MINUTES,
+    NEXT_ACTION,
+    PROJECT,
+    WAITING,
+    SCHEDULED,
+    SOMEDAY,
+    REFERENCE,
+}
 
 data class InputFile(
     val fileName: String,

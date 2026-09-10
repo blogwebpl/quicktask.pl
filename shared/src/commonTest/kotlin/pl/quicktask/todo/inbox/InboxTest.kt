@@ -2,6 +2,7 @@ package pl.quicktask.todo.inbox
 
 import com.russhwolf.settings.Settings
 import kotlinx.serialization.json.Json
+import pl.quicktask.todo.auth.DefaultDPoPManager
 import pl.quicktask.todo.auth.SessionManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,9 +117,59 @@ class InboxTest {
     }
 
     @Test
+    fun testCompletedInTwoMinutesItemDtoDeserialization() {
+        val jsonString = """
+            [
+              {
+                "itemId": "550e8400-e29b-41d4-a716-446655440000",
+                "encryptedTitle": "BASE64_ENCRYPTED_TITLE",
+                "encryptedNote": "BASE64_ENCRYPTED_NOTE",
+                "encryptedItemKey": "BASE64_ENCRYPTED_ITEM_KEY",
+                "createdAt": "2026-09-10T08:00:00.000Z",
+                "updatedAt": "2026-09-10T08:02:00.000Z",
+                "processedAt": "2026-09-10T08:02:00.000Z",
+                "attachments": [],
+                "tags": [
+                  {
+                    "tagId": "660e8400-e29b-41d4-a716-446655440001",
+                    "name": "dom"
+                  }
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val items = json.decodeFromString<List<CompletedInTwoMinutesItemDto>>(jsonString)
+        assertEquals(1, items.size)
+        val item = items[0]
+        assertEquals("550e8400-e29b-41d4-a716-446655440000", item.itemId)
+        assertEquals("BASE64_ENCRYPTED_TITLE", item.encryptedTitle)
+        assertEquals("2026-09-10T08:02:00.000Z", item.processedAt)
+        assertEquals(1, item.tags.size)
+        assertEquals("dom", item.tags[0].name)
+    }
+
+    @Test
+    fun testCompleteInTwoMinutesRequestDtoSerialization() {
+        val request = CompleteInTwoMinutesRequestDto(deleteAttachments = false)
+        val jsonString = json.encodeToString(CompleteInTwoMinutesRequestDto.serializer(), request)
+        val decoded = json.decodeFromString<CompleteInTwoMinutesRequestDto>(jsonString)
+        assertEquals(false, decoded.deleteAttachments)
+    }
+
+    @Test
+    fun testCompleteInTwoMinutesRequestDtoWithDeleteAttachmentsTrue() {
+        val request = CompleteInTwoMinutesRequestDto(deleteAttachments = true)
+        val jsonString = json.encodeToString(CompleteInTwoMinutesRequestDto.serializer(), request)
+        val decoded = json.decodeFromString<CompleteInTwoMinutesRequestDto>(jsonString)
+        assertEquals(true, decoded.deleteAttachments)
+    }
+
+    @Test
     fun testRepositoryInstantiable() {
         val sessionManager = SessionManager(FakeSettings())
-        val repository = InboxRepository(sessionManager = sessionManager)
+        val dPoPManager = DefaultDPoPManager(settings = FakeSettings())
+        val repository = InboxRepository(sessionManager = sessionManager, dPoPManager = dPoPManager)
         assertNotNull(repository)
     }
 }
