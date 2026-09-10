@@ -37,4 +37,18 @@
     <string name="screen_weekly_review">Przegląd</string>
     <string name="screen_completed">Zakończone</string>
     <string name="screen_trash">Kosz</string>
+
+    <!-- Task Dialog / Edit & Create -->
+    <string name="task_new_title">Nowe zadanie</string>
+    <string name="task_edit_title">Edycja zadania</string>
+    <string name="task_title_placeholder">Do zrobienia</string>
+    <string name="task_note_placeholder">Notatka (opcjonalnie)</string>
+    <string name="task_attachments_label">Załączniki:</string>
+    <string name="task_add_attachment">Dodaj plik załącznika</string>
+    <string name="task_save_button">Zapisz</string>
+    <string name="task_add_button">Dodaj</string>
+    <string name="task_saving">Zapisywanie zadania…</string>
+    <string name="task_uploading_files">Wysyłanie plików: %1$d%%</string>
+    <string name="task_close_description">Zamknij</string>
+    <string name="task_remove_file_description">Usuń plik</string>
 </resources>

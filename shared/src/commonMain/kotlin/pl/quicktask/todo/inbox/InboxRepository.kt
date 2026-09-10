@@ -272,6 +272,7 @@ class InboxRepository(
         title: String,
         note: String,
         newFiles: List<InputFile> = emptyList(),
+        removedAttachmentIds: List<String> = emptyList(),
     ): Result<UpdateInboxItemResponseDto> = withContext(Dispatchers.Default) {
         runCatching {
             val encryptedTitle = encryptText(item.itemKey, title)
@@ -296,6 +297,20 @@ class InboxRepository(
             if (!response.status.isSuccess()) {
                 val errorText = response.bodyAsText()
                 error("Błąd aktualizacji wpisu (${response.status.value}): $errorText")
+            }
+
+            for (attachmentId in removedAttachmentIds) {
+                val attUrl = "${baseUrl.trimEnd('/')}/inbox/${item.itemId}/attachments/$attachmentId"
+                val attResponse = executeAuthenticated("DELETE", attUrl) { token, dpop ->
+                    httpClient.delete(attUrl) {
+                        header("Authorization", "DPoP $token")
+                        header("DPoP", dpop)
+                    }
+                }
+                if (!attResponse.status.isSuccess()) {
+                    val errorText = attResponse.bodyAsText()
+                    error("Błąd usuwania załącznika (${attResponse.status.value}): $errorText")
+                }
             }
 
             for (file in newFiles) {
@@ -328,6 +343,25 @@ class InboxRepository(
 
             invalidateCache()
             response.body()
+        }
+    }
+
+    suspend fun deleteAttachment(itemId: String, attachmentId: String): Result<Unit> = withContext(Dispatchers.Default) {
+        runCatching {
+            val url = "${baseUrl.trimEnd('/')}/inbox/$itemId/attachments/$attachmentId"
+
+            val response = executeAuthenticated("DELETE", url) { token, dpop ->
+                httpClient.delete(url) {
+                    header("Authorization", "DPoP $token")
+                    header("DPoP", dpop)
+                }
+            }
+
+            if (!response.status.isSuccess()) {
+                val errorText = response.bodyAsText()
+                error("Błąd usuwania załącznika (${response.status.value}): $errorText")
+            }
+            invalidateCache()
         }
     }
 

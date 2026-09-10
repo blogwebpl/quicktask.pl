@@ -37,4 +37,18 @@
     <string name="screen_weekly_review">Review</string>
     <string name="screen_completed">Completed</string>
     <string name="screen_trash">Trash</string>
+
+    <!-- Task Dialog / Edit & Create -->
+    <string name="task_new_title">New task</string>
+    <string name="task_edit_title">Edit task</string>
+    <string name="task_title_placeholder">To do</string>
+    <string name="task_note_placeholder">Note (optional)</string>
+    <string name="task_attachments_label">Attachments:</string>
+    <string name="task_add_attachment">Add attachment file</string>
+    <string name="task_save_button">Save</string>
+    <string name="task_add_button">Add</string>
+    <string name="task_saving">Saving task…</string>
+    <string name="task_uploading_files">Uploading files: %1$d%%</string>
+    <string name="task_close_description">Close</string>
+    <string name="task_remove_file_description">Remove file</string>
 </resources>
