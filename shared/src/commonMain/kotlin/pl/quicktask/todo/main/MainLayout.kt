@@ -4,12 +4,15 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import pl.quicktask.todo.inbox.sharedInboxRepository
 
 @Composable
 fun MainLayout(
@@ -18,6 +21,18 @@ fun MainLayout(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf(Screen.INBOX) }
+
+    val inboxItems by sharedInboxRepository.itemsFlow.collectAsStateWithLifecycle(emptyList())
+
+    LaunchedEffect(Unit) {
+        sharedInboxRepository.getItems()
+    }
+
+    val itemCounts = remember(inboxItems) {
+        mapOf(
+            Screen.INBOX to inboxItems.size,
+        )
+    }
 
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch {
@@ -60,6 +75,7 @@ fun MainLayout(
         drawerContent = {
             AppDrawer(
                 currentRoute = currentScreen.id,
+                itemCounts = itemCounts,
                 onNavigate = handleNavigate,
                 onLogout = handleLogout,
             )

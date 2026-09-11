@@ -95,6 +95,7 @@ private val drawerSections = listOf(
 @Composable
 fun AppDrawer(
     currentRoute: String = Screen.INBOX.id,
+    itemCounts: Map<Screen, Int?> = emptyMap(),
     onNavigate: (String) -> Unit = {},
     onLogout: () -> Unit = {},
 ) {
@@ -123,10 +124,14 @@ fun AppDrawer(
                     )
 
                     section.items.forEach { item ->
+                        val count = itemCounts[item.screen] ?: item.badge
+                        val displayCount = count?.takeIf { it > 0 }
                         NavigationDrawerItem(
                             label = { Text(stringResource(item.screen.titleRes)) },
                             icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                            badge = item.badge?.let { { Text(it.toString()) } },
+                            badge = displayCount?.let { cnt ->
+                                { Text(cnt.toString()) }
+                            },
                             selected = currentRoute == item.screen.id,
                             onClick = { onNavigate(item.screen.id) },
                             modifier = Modifier.padding(horizontal = 4.dp),

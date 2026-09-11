@@ -324,11 +324,15 @@ private fun InboxItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(start = 16.dp, top = 8.dp, end = 4.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(top = 8.dp, bottom = 8.dp, end = 8.dp),
+            ) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -361,12 +365,18 @@ private fun InboxItemCard(
                 }
             }
 
-            Box {
-                IconButton(onClick = { showMenu = true }) {
+            Box(
+                modifier = Modifier.align(Alignment.CenterVertically),
+            ) {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(56.dp),
+                ) {
                     Icon(
                         painter = painterResource(Res.drawable.ic_process),
                         contentDescription = stringResource(Res.string.process_item),
                         tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
                     )
                 }
 
