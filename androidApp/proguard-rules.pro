@@ -11,4 +11,10 @@
 
 # Cryptography / Opaque
 -keep class dev.whyoleg.cryptography.** { *; }
--keep class pl.quicktask.todo.auth.** { *; }
+-keep class pl.quicktask.app.auth.** { *; }
+
+# Optional Error Prone annotations referenced by dependencies for static analysis.
+-dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
+-dontwarn com.google.errorprone.annotations.CheckReturnValue
+-dontwarn com.google.errorprone.annotations.Immutable
+-dontwarn com.google.errorprone.annotations.RestrictedApi

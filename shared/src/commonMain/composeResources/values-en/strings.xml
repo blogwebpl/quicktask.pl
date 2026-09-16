@@ -13,6 +13,7 @@
     <string name="error_invalid_dpop_proof">Failed to verify request security. Please try again.</string>
     <string name="error_invalid_login_request">Cannot initiate secure login. Refresh the page and try again.</string>
     <string name="error_access_token_expired">Session expired.</string>
+    <string name="error_user_keys_locked">User keys are locked. Please log in again to unlock keys.</string>
 
     <!-- Navigation Drawer & Layout -->
     <string name="drawer_content">Drawer content</string>
@@ -25,6 +26,17 @@
     <string name="section_library">LIBRARY</string>
     <string name="section_review">REVIEW</string>
     <string name="section_history">HISTORY</string>
+
+    <!-- Theme Selector -->
+    <string name="theme_section_title">Theme</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_system">System</string>
+
+    <!-- General Actions -->
+    <string name="action_add">Add</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_close">Close</string>
 
     <!-- Screens -->
     <string name="screen_inbox">Inbox</string>
@@ -44,13 +56,17 @@
     <string name="task_title_placeholder">To do</string>
     <string name="task_note_placeholder">Note (optional)</string>
     <string name="task_attachments_label">Attachments:</string>
-    <string name="task_add_attachment">Add attachment file</string>
+    <string name="task_add_attachment">Add attachment</string>
     <string name="task_save_button">Save</string>
     <string name="task_add_button">Add</string>
     <string name="task_saving">Saving task…</string>
     <string name="task_uploading_files">Uploading files: %1$d%%</string>
     <string name="task_close_description">Close</string>
     <string name="task_remove_file_description">Remove file</string>
+
+    <!-- Inbox -->
+    <string name="inbox_empty">No tasks in Inbox</string>
+    <string name="error_max_attachments">Maximum 10 attachments allowed</string>
 
     <!-- Process / Clarify -->
     <string name="process_item">Process</string>
@@ -60,6 +76,7 @@
     <string name="timer_cancel">Cancel</string>
     <string name="timer_done">Done</string>
     <string name="timer_title">Do it in 2 minutes</string>
+    <string name="timer_remaining">remaining</string>
 
     <!-- Universal Dialogs -->
     <string name="dialog_delete_attachments_title">Delete attachment</string>
@@ -69,4 +86,28 @@
     <string name="dialog_delete_item_title">Delete task</string>
     <string name="dialog_delete_item_question">Are you sure you want to delete the task \"%1$s\"?</string>
     <string name="dialog_delete_confirm">Delete</string>
+
+    <!-- Trash -->
+    <string name="trash_empty">Trash is empty</string>
+    <string name="trash_empty_all">Empty trash</string>
+    <string name="trash_items_count">Items in trash: %1$d</string>
+    <string name="dialog_empty_trash_title">Empty trash</string>
+    <string name="dialog_empty_trash_question">Are you sure you want to permanently delete all items from the trash? This operation cannot be undone.</string>
+    <string name="dialog_empty_trash_confirm">Delete all</string>
+    <string name="dialog_permanent_delete_title">Permanent deletion</string>
+    <string name="dialog_permanent_delete_question">Are you sure you want to permanently delete \"%1$s\"? This operation cannot be undone.</string>
+    <string name="trash_origin_2min">Done in 2 minutes</string>
+    <string name="trash_delete_permanently_description">Delete permanently</string>
+    <string name="trash_attachments_description">Attachments</string>
+
+    <!-- Errors -->
+    <string name="error_fetch_items">Error fetching items</string>
+    <string name="error_update_item">Error updating item</string>
+    <string name="error_save_item">Error saving item</string>
+    <string name="error_delete_item">Error deleting item</string>
+    <string name="error_complete_2min">Error marking item as done in 2 minutes</string>
+    <string name="error_fetch_trash">Error fetching trash items</string>
+    <string name="error_restore_item">Error restoring item</string>
+    <string name="error_permanent_delete">Error permanently deleting item</string>
+    <string name="error_empty_trash">Error emptying trash</string>
 </resources>

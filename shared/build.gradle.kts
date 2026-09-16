@@ -32,7 +32,7 @@ kotlin {
     }
     
     android {
-       namespace = "pl.quicktask.todo.shared"
+       namespace = "pl.quicktask.app.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     

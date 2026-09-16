@@ -17,11 +17,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "pl.quicktask.todo.MainKt"
+        mainClass = "pl.quicktask.app.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "pl.quicktask.todo"
+            packageName = "pl.quicktask.app"
             packageVersion = "1.0.0"
         }
     }

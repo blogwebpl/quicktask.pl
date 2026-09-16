@@ -25,6 +25,12 @@ Use the run configurations provided by the run widget in your IDE's toolbar. You
   - JS target (slower, supports older browsers): `./gradlew :webApp:jsBrowserDevelopmentRun`
 - iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
 
+### Android releases
+
+Android's internal `versionCode` is generated automatically from the build time. Every newly built release bundle therefore gets a number greater than previously generated bundles and can be uploaded to Google Play without editing `build.gradle.kts`.
+
+Create the Play Store bundle with `./gradlew :androidApp:bundleRelease`. For a reproducible build, override the generated number explicitly with `./gradlew :androidApp:bundleRelease -PandroidVersionCode=1234`.
+
 ### Running tests
 
 Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:

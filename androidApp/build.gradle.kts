@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val versionCodeEpochSeconds = 1_767_225_600L // 2026-01-01 00:00:00 UTC
+val versionCodeBase = 1190L
+val generatedVersionCode = providers.gradleProperty("androidVersionCode")
+    .orNull
+    ?.toIntOrNull()
+    ?: (versionCodeBase + System.currentTimeMillis() / 1000L - versionCodeEpochSeconds).toInt()
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
@@ -22,19 +29,22 @@ dependencies {
 }
 
 android {
-    namespace = "pl.quicktask.todo"
+    namespace = "pl.quicktask.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "pl.quicktask.todo"
+        applicationId = "pl.quicktask.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
+        // A new, increasing code is generated for every build invocation.
+        // It can be fixed for reproducible builds with -PandroidVersionCode=1234.
+        versionCode = generatedVersionCode
         versionName = "1.0"
     }
     splits {
         abi {
-            isEnable = true
+            // App Bundles require a single output; Google Play handles ABI delivery.
+            isEnable = false
             reset()
             include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
             isUniversalApk = false
@@ -52,6 +62,9 @@ android {
     }
     buildTypes {
         release {
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

@@ -13,7 +13,7 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <provider
-            android:name="pl.quicktask.todo.auth.AppContextProvider"
+            android:name="pl.quicktask.app.auth.AppContextProvider"
             android:authorities="${applicationId}.appcontextprovider"
             android:exported="false"
             android:initOrder="100" />

@@ -13,6 +13,7 @@
     <string name="error_invalid_dpop_proof">Nie udało się potwierdzić bezpieczeństwa żądania. Spróbuj ponownie.</string>
     <string name="error_invalid_login_request">Nie można rozpocząć bezpiecznego logowania. Odśwież stronę i spróbuj ponownie.</string>
     <string name="error_access_token_expired">Sesja wygasła.</string>
+    <string name="error_user_keys_locked">Klucze użytkownika są zablokowane. Zaloguj się ponownie, aby odblokować klucze.</string>
 
     <!-- Navigation Drawer & Layout -->
     <string name="drawer_content">Zawartość Drawera</string>
@@ -25,6 +26,17 @@
     <string name="section_library">BIBLIOTEKA</string>
     <string name="section_review">PRZEGLĄD</string>
     <string name="section_history">HISTORIA</string>
+
+    <!-- Theme Selector -->
+    <string name="theme_section_title">Motyw</string>
+    <string name="theme_mode_light">Jasny</string>
+    <string name="theme_mode_dark">Ciemny</string>
+    <string name="theme_mode_system">System</string>
+
+    <!-- General Actions -->
+    <string name="action_add">Dodaj</string>
+    <string name="action_restore">Przywróć</string>
+    <string name="action_close">Zamknij</string>
 
     <!-- Screens -->
     <string name="screen_inbox">Skrzynka odbiorcza</string>
@@ -44,13 +56,17 @@
     <string name="task_title_placeholder">Do zrobienia</string>
     <string name="task_note_placeholder">Notatka (opcjonalnie)</string>
     <string name="task_attachments_label">Załączniki:</string>
-    <string name="task_add_attachment">Dodaj plik załącznika</string>
+    <string name="task_add_attachment">Dodaj załącznik</string>
     <string name="task_save_button">Zapisz</string>
     <string name="task_add_button">Dodaj</string>
     <string name="task_saving">Zapisywanie zadania…</string>
     <string name="task_uploading_files">Wysyłanie plików: %1$d%%</string>
     <string name="task_close_description">Zamknij</string>
     <string name="task_remove_file_description">Usuń plik</string>
+
+    <!-- Inbox -->
+    <string name="inbox_empty">Brak zadań w Skrzynce odbiorczej</string>
+    <string name="error_max_attachments">Maksymalna liczba załączników to 10</string>
 
     <!-- Process / Clarify -->
     <string name="process_item">Przetwórz</string>
@@ -60,6 +76,7 @@
     <string name="timer_cancel">Anuluj</string>
     <string name="timer_done">Zrobione</string>
     <string name="timer_title">Zrób w 2 minuty</string>
+    <string name="timer_remaining">pozostało</string>
 
     <!-- Universal Dialogs -->
     <string name="dialog_delete_attachments_title">Usunięcie załącznika</string>
@@ -69,4 +86,28 @@
     <string name="dialog_delete_item_title">Usuń zadanie</string>
     <string name="dialog_delete_item_question">Czy na pewno chcesz usunąć zadanie „%1$s”?</string>
     <string name="dialog_delete_confirm">Usuń</string>
+
+    <!-- Trash -->
+    <string name="trash_empty">Kosz jest pusty</string>
+    <string name="trash_empty_all">Opróżnij kosz</string>
+    <string name="trash_items_count">Elementy w koszu: %1$d</string>
+    <string name="dialog_empty_trash_title">Opróżnienie kosza</string>
+    <string name="dialog_empty_trash_question">Czy na pewno chcesz trwale usunąć wszystkie elementy z kosza? Ta operacja jest nieodwracalna.</string>
+    <string name="dialog_empty_trash_confirm">Usuń wszystko</string>
+    <string name="dialog_permanent_delete_title">Trwałe usunięcie</string>
+    <string name="dialog_permanent_delete_question">Czy na pewno chcesz trwale usunąć element „%1$s”? Ta operacja jest nieodwracalna.</string>
+    <string name="trash_origin_2min">Ukończone w 2 minuty</string>
+    <string name="trash_delete_permanently_description">Usuń trwale</string>
+    <string name="trash_attachments_description">Załączniki</string>
+
+    <!-- Errors -->
+    <string name="error_fetch_items">Błąd pobierania elementów</string>
+    <string name="error_update_item">Błąd aktualizacji elementu</string>
+    <string name="error_save_item">Błąd zapisywania elementu</string>
+    <string name="error_delete_item">Błąd usuwania elementu</string>
+    <string name="error_complete_2min">Błąd oznaczania elementu jako wykonanego w 2 minuty</string>
+    <string name="error_fetch_trash">Błąd pobierania elementów kosza</string>
+    <string name="error_restore_item">Błąd przywracania elementu</string>
+    <string name="error_permanent_delete">Błąd trwałego usuwania elementu</string>
+    <string name="error_empty_trash">Błąd czyszczenia kosza</string>
 </resources>
