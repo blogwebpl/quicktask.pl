@@ -4,7 +4,8 @@ import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import pl.quicktask.app.auth.createSettings
+import pl.quicktask.app.auth.session.createSettings
+import pl.quicktask.app.common.AppLoggerManager
 
 enum class ThemeMode {
     SYSTEM,
@@ -31,5 +32,6 @@ object ThemeManager {
     fun setThemeMode(mode: ThemeMode) {
         runCatching { settings.putString(KEY_THEME_MODE, mode.name) }
         _themeMode.value = mode
+        AppLoggerManager.logStateChange("ThemeManager", "Zmiana motywu na ${mode.name}")
     }
 }

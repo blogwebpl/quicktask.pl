@@ -1,0 +1,16 @@
+{
+  "email": "compatibility@example.test",
+  "password": "Test-only OPAQUE compatibility 2026!",
+  "origin": "https://compatibility.example.test",
+  "serverSetup": "ChFGVxA2MIU3apt0fEsog3TvA2I_-Dc6AZcQc5QV38iE_QWGbOFlVUhNRj7LDJE487wy54Y-vuSbv-8vyTzIMo4OHBgujjhbkAOe2Fvbt2rVabWTyfFCnr6aIY9G8YoFsA8G6m1C192BrvhwxoTbI3D5bPoIZpGO0vYdj_mVlCM",
+  "registrationRecord": "WjQlQTuK9q7DwT5eboA5wFEqjZM43FzcGuHqv66NcnGgHc0Oj8LyVjoBZs16_7jQrVCdnGbZWJlDVHIDVDkcq8S3doI4RBfFrqEPojR3KLIXvCYS4YaBAk5U3LtytSfmlx1em5NDgBnExaeCDP7mvzsNZG6LsFVZvwogjJo4EckdXp-6_m20uny1k4h5BClcTkVOxmvvyKSKsivWuib--RuOCgQ5fe9aCx8i186WmetAaaHFTDEB65qD6SnoBAP-",
+  "exportKey": "HvM1WqD8Qg1LaIIVBrTfd04Ae5D6zh2bRHBDI-rz0cXeLaaHiS9W2MFHDZJGpUewsuWZAwjObvl0oOvav9Ocqg",
+  "serverStaticPublicKey": "Oi89zEk8BfU-lkuSa3L1VJPZ7rVzt2SWfroLR-C6Tlg",
+  "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVdQ1dU/0pj6u95/z46T4TUbctWSYhC6zwbvH7cSyLq1esGT3l/5QCDPtS0iS4+al33yx5tD0Nzs3/zVE3SzumQ==",
+  "privateKey": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgpEsJB3uO+KFXRzqAv57QTBW4obAiEnW3RhVPC5XZcbShRANCAARV1DV1T/SmPq73n/PjpPhNRty1ZJiELrPBu8ftxLIurV6wZPeX/lAIM+1LSJLj5qXffLHm0PQ3Ozf/NUTdLO6Z",
+  "privateKeyNonce": "2UYkxam7DUNMyJeP",
+  "encryptedPrivateKey": "eBhpg+sgyDC+C9Q89/ePG32u/fAZuC7m9SCadcesLD8HtFt2veJO+UlbNwfOO+gITN1XDNkTK1zHp6Mn52alz+NUT1EILAqBcxCAgvJKMrLfe7i0KiCe4WjIlGH6eRTb8OMTnF5BTRs+y96rd2IJVTb1G9qH33kqDlkbV4NwdYJbuDg3vi5aazmyJqL7/qoazl35/+0tPqolpQ==",
+  "fileKey": "9zkWmvuZ9ezK4V8T57kO1OhyeBFJOsZREU2ToiQX9C8=",
+  "ciphertext": "KOXMF5swgnNfUmhJuxq7tW5qQrFXm509cc0prBZbp9d0Jr6nffKJmoAYgVCmHzd9NigjKsoFbUrw7vRsooipgDmsX9vadTN+xrwCIXK/cwlv",
+  "plaintext": "Existing encrypted attachment — zażółć gęślą"
+}

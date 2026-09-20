@@ -23,12 +23,12 @@ kotlin {
     jvm()
     
     js {
-        browser()
+        browser { testTask { useKarma { useChromeHeadless() } } }
     }
     
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
-        browser()
+        browser { testTask { useKarma { useChromeHeadless() } } }
     }
     
     android {
@@ -53,6 +53,13 @@ kotlin {
     }
     
     sourceSets {
+        androidMain { kotlin.srcDir("src/androidJvmMain/kotlin") }
+        jvmMain { kotlin.srcDir("src/androidJvmMain/kotlin") }
+        named("androidHostTest") { kotlin.srcDir("src/androidJvmTest/kotlin") }
+        jvmTest { kotlin.srcDir("src/androidJvmTest/kotlin") }
+        jsTest { kotlin.srcDir("src/browserTest/kotlin") }
+        wasmJsTest { kotlin.srcDir("src/browserTest/kotlin") }
+
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.process)
@@ -62,6 +69,15 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(files("libs/opaque-kmp.aar"))
             implementation("net.java.dev.jna:jna:5.17.0@aar")
+        }
+        named("androidHostTest") {
+            // Reuse the desktop OPAQUE binaries; the Android AAR only contains Android .so files.
+            resources.srcDir("src/jvmMain/resources")
+            resources.srcDir("src/jvmTest/resources")
+            dependencies {
+                // Host tests run on the desktop JVM and need JNA's host native libraries.
+                runtimeOnly("net.java.dev.jna:jna:5.17.0@jar")
+            }
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -82,12 +98,19 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.ktor.client.mock)
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
         }
         jsMain.dependencies {
+            implementation(npm("@quicktask/browser-security", project.file("browser-security")))
             implementation(libs.wrappers.browser)
             implementation(libs.cryptography.provider.webcrypto)
             implementation(npm("@serenity-kit/opaque", "1.1.0"))
+        }
+        wasmJsMain.dependencies {
+            implementation(npm("@quicktask/browser-security", project.file("browser-security")))
+            implementation(npm("@serenity-kit/opaque", "1.1.0"))
+            implementation(libs.cryptography.provider.webcrypto)
         }
         jvmMain.dependencies {
             implementation(libs.cryptography.provider.jdk)

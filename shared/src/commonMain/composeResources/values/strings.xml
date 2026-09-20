@@ -18,6 +18,7 @@
     <!-- Navigation Drawer & Layout -->
     <string name="drawer_content">Drawer content</string>
     <string name="menu">Menu</string>
+    <string name="settings">Settings</string>
 
     <!-- Drawer Sections -->
     <string name="section_capture">CAPTURE</string>
@@ -37,23 +38,35 @@
     <string name="action_add">Add</string>
     <string name="action_restore">Restore</string>
     <string name="action_close">Close</string>
+    <string name="action_projects">Projects</string>
 
     <!-- Screens -->
     <string name="screen_inbox">Inbox</string>
+    <string name="screen_now">Now</string>
     <string name="screen_next_actions">Next Actions</string>
     <string name="screen_scheduled">Scheduled</string>
     <string name="screen_waiting">Waiting</string>
     <string name="screen_projects">All Projects</string>
     <string name="screen_someday">Someday/Maybe</string>
     <string name="screen_reference">Reference</string>
-    <string name="screen_weekly_review">Weekly Review</string>
+    <string name="screen_review">Review</string>
     <string name="screen_completed">Completed</string>
     <string name="screen_trash">Trash</string>
+
+    <!-- Now Screen Sections -->
+    <string name="now_available_next_actions">Available Next Actions</string>
+    <string name="now_scheduled_today">Scheduled Today</string>
+    <string name="now_overdue">Overdue</string>
+    <string name="now_waiting_for_review">Waiting for Review</string>
+    <string name="now_empty">No tasks for now</string>
 
     <!-- Task Dialog / Edit & Create -->
     <string name="task_new_title">New task</string>
     <string name="task_edit_title">Edit task</string>
     <string name="task_title_placeholder">To do</string>
+    <string name="task_title_prompt">What do you want to do?</string>
+    <string name="task_note_label">Note</string>
+    <string name="task_optional_label">optional</string>
     <string name="task_note_placeholder">Note (optional)</string>
     <string name="task_attachments_label">Attachments:</string>
     <string name="task_add_attachment">Add attachment</string>
@@ -110,4 +123,112 @@
     <string name="error_restore_item">Error restoring item</string>
     <string name="error_permanent_delete">Error permanently deleting item</string>
     <string name="error_empty_trash">Error emptying trash</string>
+    <string name="attachment_metadata_decryption_failed">Unable to decrypt attachment metadata</string>
+    <string name="attachment_unnamed">Attachment</string>
+    <string name="error_item_decryption">Unable to decrypt this item.</string>
+    <string name="error_file_integrity">The file is damaged or incomplete. Please try downloading it again.</string>
+    <string name="error_item_rate_limit">Too many requests. Please wait a moment and try again.</string>
+
+    <!-- About App / Settings -->
+    <string name="about_app_section_title">About app</string>
+    <string name="app_version_label">Version</string>
+    <string name="app_build_number_label">Build number</string>
+
+    <!-- Settings Categories -->
+    <string name="settings_category_account_title">General</string>
+    <string name="settings_category_account_subtitle_format">Time zone: %1$s</string>
+    <string name="settings_category_theme_title">Appearance &amp; Theme</string>
+    <string name="settings_category_theme_subtitle_format">Theme: %1$s</string>
+    <string name="settings_category_logs_title">Logs &amp; Diagnostics</string>
+    <string name="settings_category_logs_subtitle_enabled">Logging enabled (%1$d logs)</string>
+    <string name="settings_category_logs_subtitle_disabled">Logging disabled</string>
+    <string name="settings_category_about_title">About App</string>
+    <string name="settings_category_about_subtitle_format">Version %1$s (%2$s)</string>
+
+    <!-- User Settings -->
+    <string name="user_settings_section_title">User Settings</string>
+    <string name="timezone_label">Time zone</string>
+    <string name="timezone_hint">Select time zone</string>
+    <string name="select_timezone_title">Select time zone</string>
+    <string name="search_timezone_placeholder">Search time zone…</string>
+    <string name="save_settings_button">Save settings</string>
+    <string name="settings_saving">Saving settings…</string>
+    <string name="settings_saved_message">Settings saved successfully.</string>
+    <string name="error_fetch_settings">Failed to fetch settings</string>
+    <string name="error_save_settings">Failed to save settings</string>
+    <string name="timezone_max_length_error">Maximum time zone length is 100 characters.</string>
+    <string name="login_error_format">An error occurred during login: %1$s</string>
+
+    <!-- Session & Unlock -->
+    <string name="session_memory_only_warning">Cannot securely remember session. Log in again after closing the application.</string>
+    <string name="disable_remember_unlock">Disable remembered unlock</string>
+    <string name="remember_unlock_checkbox">Remember unlock on this device? Anyone using this browser profile may access the content.</string>
+
+    <!-- Project Selector -->
+    <string name="project_label">Project</string>
+    <string name="no_project">No project</string>
+    <string name="projects_title">Projects</string>
+    <string name="projects_header">PROJECTS</string>
+    <string name="search_project">Search project…</string>
+    <string name="search_or_create_project">Search or add project…</string>
+    <string name="new_project_format">New project "%1$s"</string>
+    <string name="select_project">Select project</string>
+
+    <!-- Next Actions Screen & Filtering -->
+    <string name="next_actions_empty">No next actions</string>
+    <string name="filter_all">All</string>
+    <string name="no_actions_in_context">No actions in selected context</string>
+
+    <!-- Dates & Formatting -->
+    <string name="date_today">Today</string>
+    <string name="date_tomorrow">Tomorrow</string>
+    <string name="date_next_week">In a week</string>
+    <string name="date_calendar">Calendar</string>
+    <string name="date_overdue_format">Overdue (%1$s)</string>
+    <string name="scheduled_date_format">Scheduled: %1$s</string>
+    <string name="waiting_for_format">Waiting: %1$s</string>
+    <string name="due_date_optional">Due date (optional)</string>
+    <string name="date_placeholder">YYYY-MM-DD</string>
+    <string name="clear_due_date">Clear due date</string>
+    <string name="open_calendar">Open calendar</string>
+    <string name="action_select">Select</string>
+
+    <!-- Contexts Sheet & Section -->
+    <string name="contexts_title">Contexts</string>
+    <string name="more_options">More options</string>
+    <string name="search_or_create_context">Search or create context (e.g. @Office)…</string>
+    <string name="action_clear">Clear</string>
+    <string name="show_gps_fields">Add optional GPS coordinates (lat, lon, radius)</string>
+    <string name="hide_gps_fields">Hide GPS coordinates</string>
+    <string name="latitude_label">Latitude (Lat)</string>
+    <string name="longitude_label">Longitude (Lon)</string>
+    <string name="radius_label">Radius (in meters)</string>
+    <string name="contexts_header">CONTEXTS</string>
+    <string name="no_contexts">No contexts (click to add)</string>
+    <string name="edit_contexts">Edit contexts</string>
+    <string name="new_context_format">New context "%1$s"</string>
+    <string name="new_context_with_gps_format">New context "%1$s" (with GPS)</string>
+    <string name="action_add_chip">+ Add</string>
+
+    <!-- Tags Sheet & Section -->
+    <string name="tags_title">Tags</string>
+    <string name="search_or_create_tag">Search or create tag…</string>
+    <string name="tags_header">TAGS</string>
+    <string name="new_tag_format">New tag "%1$s"</string>
+    <string name="edit_tags">Edit tags</string>
+    <string name="no_tags">No tags (click to add)</string>
+
+    <!-- Logs Section in Settings -->
+    <string name="logs_section_title">Logs</string>
+    <string name="logs_enabled_label">Logging enabled</string>
+    <string name="logs_disabled_label">Logging disabled</string>
+    <string name="logs_clear_button">Clear logs</string>
+    <string name="logs_empty">No recorded logs</string>
+    <string name="logs_filter_all">All</string>
+    <string name="logs_filter_api">API</string>
+    <string name="logs_filter_state">State</string>
+    <string name="logs_filter_refresh">Refresh</string>
+    <string name="logs_filter_func">Functions</string>
+    <string name="logs_search_hint">Search logs…</string>
+    <string name="logs_count">Log count: %1$d</string>
 </resources>

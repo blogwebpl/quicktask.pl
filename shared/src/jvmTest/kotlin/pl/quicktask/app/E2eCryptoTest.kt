@@ -3,21 +3,26 @@ package pl.quicktask.app
 import com.opaquekmp.base64UrlDecode
 import com.opaquekmp.base64UrlEncode
 import dev.whyoleg.cryptography.algorithms.EC
+import dev.whyoleg.cryptography.algorithms.AES
+import pl.quicktask.app.auth.crypto.getCryptographyProvider
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.runBlocking
-import pl.quicktask.app.auth.UserKeyMaterialDto
-import pl.quicktask.app.auth.createItemKey
-import pl.quicktask.app.auth.decryptBuffer
-import pl.quicktask.app.auth.decryptText
-import pl.quicktask.app.auth.encryptBuffer
-import pl.quicktask.app.auth.encryptText
-import pl.quicktask.app.auth.fromBase64Url
-import pl.quicktask.app.auth.generateUserKeyPair
-import pl.quicktask.app.auth.restoreUserKeyPair
-import pl.quicktask.app.auth.sha256Base64
-import pl.quicktask.app.auth.toBase64
-import pl.quicktask.app.auth.unwrapItemKey
-import pl.quicktask.app.auth.wrapItemKey
-import pl.quicktask.app.auth.wrapPrivateKey
+import pl.quicktask.app.auth.crypto.UserKeyMaterialDto
+import pl.quicktask.app.auth.crypto.createItemKey
+import pl.quicktask.app.auth.crypto.decryptBuffer
+import pl.quicktask.app.auth.crypto.decryptText
+import pl.quicktask.app.auth.crypto.encryptBuffer
+import pl.quicktask.app.auth.crypto.encryptText
+import pl.quicktask.app.auth.crypto.fromBase64Url
+import pl.quicktask.app.auth.crypto.generateUserKeyPair
+import pl.quicktask.app.auth.crypto.restoreUserKeyPair
+import pl.quicktask.app.auth.crypto.sha256Base64
+import pl.quicktask.app.auth.crypto.toBase64
+import pl.quicktask.app.auth.crypto.unwrapItemKey
+import pl.quicktask.app.auth.crypto.wrapItemKey
+import pl.quicktask.app.auth.crypto.wrapPrivateKey
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -50,6 +55,7 @@ class E2eCryptoTest {
         val originalSpki = userPair.publicKey.encodeToByteArray(EC.PublicKey.Format.DER)
         val restoredSpki = restoredPair.publicKey.encodeToByteArray(EC.PublicKey.Format.DER)
         assertContentEquals(originalSpki, restoredSpki)
+        assertContentEquals(userPair.privateKeyPkcs8, restoredPair.privateKeyPkcs8)
     }
 
     @Test
@@ -108,5 +114,25 @@ class E2eCryptoTest {
 
         val decryptedData = decryptBuffer(key, encryptedBuffer)
         assertContentEquals(data, decryptedData)
+    }
+
+    @Test
+    fun testBufferFormatCompatibilityWithJce(): Unit = runBlocking {
+        val rawKey = ByteArray(32) { it.toByte() }
+        val key = getCryptographyProvider().get(AES.GCM).keyDecoder()
+            .decodeFromByteArray(AES.Key.Format.RAW, rawKey)
+        val nonce = ByteArray(12) { (it + 1).toByte() }
+        val plaintext = "Zapisany tekst: zażółć gęślą".encodeToByteArray()
+        val jce = Cipher.getInstance("AES/GCM/NoPadding")
+        val jceKey = SecretKeySpec(rawKey, "AES")
+
+        // Existing payload format: 12-byte nonce followed by ciphertext and tag.
+        jce.init(Cipher.ENCRYPT_MODE, jceKey, GCMParameterSpec(128, nonce))
+        val existingPayload = nonce + jce.doFinal(plaintext)
+        assertContentEquals(plaintext, decryptBuffer(key, existingPayload))
+
+        val newPayload = encryptBuffer(key, plaintext)
+        jce.init(Cipher.DECRYPT_MODE, jceKey, GCMParameterSpec(128, newPayload.copyOfRange(0, 12)))
+        assertContentEquals(plaintext, jce.doFinal(newPayload.copyOfRange(12, newPayload.size)))
     }
 }

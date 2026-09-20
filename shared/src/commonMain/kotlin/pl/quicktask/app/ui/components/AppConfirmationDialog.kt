@@ -45,35 +45,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-enum class DialogType {
-    QUESTION,
-    DANGER,
-    WARNING,
-    INFO,
-}
-
-enum class DialogButtonStyle {
-    PRIMARY,
-    SECONDARY,
-    OUTLINED,
-    TEXT,
-    DESTRUCTIVE,
-}
-
-enum class DialogButtonLayout {
-    AUTO,
-    HORIZONTAL,
-    VERTICAL,
-}
-
-data class DialogButton(
-    val text: String,
-    val onClick: () -> Unit,
-    val style: DialogButtonStyle = DialogButtonStyle.PRIMARY,
-    val enabled: Boolean = true,
-    val isLoading: Boolean = false,
-)
-
 /**
  * Uniwersalne, nowoczesne okno dialogowe potwierdzenia / zapytania zgodne z Material Design 3.
  *
@@ -280,90 +251,6 @@ fun AppConfirmationDialog(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RenderDialogButton(
-    button: DialogButton,
-    modifier: Modifier = Modifier,
-) {
-    val isEnabled = button.enabled && !button.isLoading
-
-    val spinnerColor = when (button.style) {
-        DialogButtonStyle.PRIMARY -> MaterialTheme.colorScheme.onPrimary
-        DialogButtonStyle.SECONDARY -> MaterialTheme.colorScheme.onSecondaryContainer
-        DialogButtonStyle.OUTLINED -> MaterialTheme.colorScheme.primary
-        DialogButtonStyle.TEXT -> MaterialTheme.colorScheme.primary
-        DialogButtonStyle.DESTRUCTIVE -> MaterialTheme.colorScheme.onError
-    }
-
-    @Composable
-    fun ButtonContent() {
-        if (button.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-                color = spinnerColor,
-            )
-        } else {
-            Text(
-                text = button.text,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-
-    when (button.style) {
-        DialogButtonStyle.PRIMARY -> {
-            Button(
-                onClick = button.onClick,
-                enabled = isEnabled,
-                modifier = modifier,
-            ) {
-                ButtonContent()
-            }
-        }
-        DialogButtonStyle.SECONDARY -> {
-            FilledTonalButton(
-                onClick = button.onClick,
-                enabled = isEnabled,
-                modifier = modifier,
-            ) {
-                ButtonContent()
-            }
-        }
-        DialogButtonStyle.OUTLINED -> {
-            OutlinedButton(
-                onClick = button.onClick,
-                enabled = isEnabled,
-                modifier = modifier,
-            ) {
-                ButtonContent()
-            }
-        }
-        DialogButtonStyle.TEXT -> {
-            TextButton(
-                onClick = button.onClick,
-                enabled = isEnabled,
-                modifier = modifier,
-            ) {
-                ButtonContent()
-            }
-        }
-        DialogButtonStyle.DESTRUCTIVE -> {
-            Button(
-                onClick = button.onClick,
-                enabled = isEnabled,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
-                modifier = modifier,
-            ) {
-                ButtonContent()
             }
         }
     }

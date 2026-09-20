@@ -18,6 +18,7 @@
     <!-- Navigation Drawer & Layout -->
     <string name="drawer_content">Zawartość Drawera</string>
     <string name="menu">Menu</string>
+    <string name="settings">Ustawienia</string>
 
     <!-- Drawer Sections -->
     <string name="section_capture">PRZECHWYTYWANIE</string>
@@ -37,23 +38,35 @@
     <string name="action_add">Dodaj</string>
     <string name="action_restore">Przywróć</string>
     <string name="action_close">Zamknij</string>
+    <string name="action_projects">Projekty</string>
 
     <!-- Screens -->
     <string name="screen_inbox">Skrzynka odbiorcza</string>
+    <string name="screen_now">Na teraz</string>
     <string name="screen_next_actions">Najbliższe działania</string>
     <string name="screen_scheduled">Zaplanowane</string>
     <string name="screen_waiting">Oczekujące</string>
     <string name="screen_projects">Wszystkie projekty</string>
     <string name="screen_someday">Kiedyś/Może</string>
     <string name="screen_reference">Materiały</string>
-    <string name="screen_weekly_review">Przegląd</string>
+    <string name="screen_review">Przegląd</string>
     <string name="screen_completed">Zakończone</string>
     <string name="screen_trash">Kosz</string>
+
+    <!-- Now Screen Sections -->
+    <string name="now_available_next_actions">Najbliższe działania</string>
+    <string name="now_scheduled_today">Zaplanowane na dziś</string>
+    <string name="now_overdue">Przeterminowane</string>
+    <string name="now_waiting_for_review">Oczekujące na przegląd</string>
+    <string name="now_empty">Brak zadań na teraz</string>
 
     <!-- Task Dialog / Edit & Create -->
     <string name="task_new_title">Nowe zadanie</string>
     <string name="task_edit_title">Edycja zadania</string>
     <string name="task_title_placeholder">Do zrobienia</string>
+    <string name="task_title_prompt">Co chcesz zrobić?</string>
+    <string name="task_note_label">Notatka</string>
+    <string name="task_optional_label">opcjonalnie</string>
     <string name="task_note_placeholder">Notatka (opcjonalnie)</string>
     <string name="task_attachments_label">Załączniki:</string>
     <string name="task_add_attachment">Dodaj załącznik</string>
@@ -110,4 +123,112 @@
     <string name="error_restore_item">Błąd przywracania elementu</string>
     <string name="error_permanent_delete">Błąd trwałego usuwania elementu</string>
     <string name="error_empty_trash">Błąd czyszczenia kosza</string>
+    <string name="attachment_metadata_decryption_failed">Nie można odszyfrować metadanych załącznika</string>
+    <string name="attachment_unnamed">Załącznik</string>
+    <string name="error_item_decryption">Nie można odszyfrować tego wpisu.</string>
+    <string name="error_file_integrity">Plik jest uszkodzony lub niekompletny. Spróbuj pobrać go ponownie.</string>
+    <string name="error_item_rate_limit">Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.</string>
+
+    <!-- About App / Settings -->
+    <string name="about_app_section_title">O programie</string>
+    <string name="app_version_label">Wersja</string>
+    <string name="app_build_number_label">Numer kompilacji</string>
+
+    <!-- Settings Categories -->
+    <string name="settings_category_account_title">Ogólne</string>
+    <string name="settings_category_account_subtitle_format">Strefa czasowa: %1$s</string>
+    <string name="settings_category_theme_title">Wygląd i motyw</string>
+    <string name="settings_category_theme_subtitle_format">Motyw: %1$s</string>
+    <string name="settings_category_logs_title">Logi i diagnostyka</string>
+    <string name="settings_category_logs_subtitle_enabled">Logowanie włączone (%1$d wpisów)</string>
+    <string name="settings_category_logs_subtitle_disabled">Logowanie wyłączone</string>
+    <string name="settings_category_about_title">O aplikacji</string>
+    <string name="settings_category_about_subtitle_format">Wersja %1$s (%2$s)</string>
+
+    <!-- User Settings -->
+    <string name="user_settings_section_title">Ustawienia użytkownika</string>
+    <string name="timezone_label">Strefa czasowa</string>
+    <string name="timezone_hint">Wybierz strefę czasową</string>
+    <string name="select_timezone_title">Wybierz strefę czasową</string>
+    <string name="search_timezone_placeholder">Szukaj strefy czasowej…</string>
+    <string name="save_settings_button">Zapisz ustawienia</string>
+    <string name="settings_saving">Zapisywanie ustawień…</string>
+    <string name="settings_saved_message">Ustawienia zostały zapisane.</string>
+    <string name="error_fetch_settings">Nie udało się pobrać ustawień</string>
+    <string name="error_save_settings">Nie udało się zapisać ustawień</string>
+    <string name="timezone_max_length_error">Maksymalna długość strefy czasowej to 100 znaków.</string>
+    <string name="login_error_format">Wystąpił błąd logowania: %1$s</string>
+
+    <!-- Session & Unlock -->
+    <string name="session_memory_only_warning">Nie można bezpiecznie zapamiętać sesji. Po zamknięciu aplikacji zaloguj się ponownie.</string>
+    <string name="disable_remember_unlock">Wyłącz zapamiętanie odblokowania</string>
+    <string name="remember_unlock_checkbox">Zapamiętać odblokowanie na tym urządzeniu? Osoba korzystająca z tego profilu przeglądarki może uzyskać dostęp do treści.</string>
+
+    <!-- Project Selector -->
+    <string name="project_label">Projekt</string>
+    <string name="no_project">Brak projektu</string>
+    <string name="projects_title">Projekty</string>
+    <string name="projects_header">PROJEKTY</string>
+    <string name="search_project">Szukaj projektu…</string>
+    <string name="search_or_create_project">Szukaj lub dodaj projekt…</string>
+    <string name="new_project_format">Nowy projekt „%1$s”</string>
+    <string name="select_project">Wybierz projekt</string>
+
+    <!-- Next Actions Screen & Filtering -->
+    <string name="next_actions_empty">Brak najbliższych działań</string>
+    <string name="filter_all">Wszystkie</string>
+    <string name="no_actions_in_context">Brak działań w wybranym kontekście</string>
+
+    <!-- Dates & Formatting -->
+    <string name="date_today">Dzisiaj</string>
+    <string name="date_tomorrow">Jutro</string>
+    <string name="date_next_week">Za tydzień</string>
+    <string name="date_calendar">Kalendarz</string>
+    <string name="date_overdue_format">Przeterminowane (%1$s)</string>
+    <string name="scheduled_date_format">Zaplanowane: %1$s</string>
+    <string name="waiting_for_format">Oczekuje: %1$s</string>
+    <string name="due_date_optional">Termin ostateczny (opcjonalnie)</string>
+    <string name="date_placeholder">RRRR-MM-DD</string>
+    <string name="clear_due_date">Wyczyść termin ostateczny</string>
+    <string name="open_calendar">Otwórz kalendarz</string>
+    <string name="action_select">Wybierz</string>
+
+    <!-- Contexts Sheet & Section -->
+    <string name="contexts_title">Konteksty</string>
+    <string name="more_options">Więcej opcji</string>
+    <string name="search_or_create_context">Szukaj lub utwórz kontekst (np. @Biuro)…</string>
+    <string name="action_clear">Wyczyść</string>
+    <string name="show_gps_fields">Dodaj opcjonalne współrzędne GPS (lat, lon, radius)</string>
+    <string name="hide_gps_fields">Ukryj współrzędne GPS</string>
+    <string name="latitude_label">Szerokość (Lat)</string>
+    <string name="longitude_label">Długość (Lon)</string>
+    <string name="radius_label">Promień (w metrach)</string>
+    <string name="contexts_header">KONTEKSTY</string>
+    <string name="no_contexts">Brak kontekstów (kliknij, aby dodać)</string>
+    <string name="edit_contexts">Edytuj konteksty</string>
+    <string name="new_context_format">Nowy kontekst „%1$s”</string>
+    <string name="new_context_with_gps_format">Nowy kontekst „%1$s” (z GPS)</string>
+    <string name="action_add_chip">+ Dodaj</string>
+
+    <!-- Tags Sheet & Section -->
+    <string name="tags_title">Tagi</string>
+    <string name="search_or_create_tag">Szukaj lub utwórz tag…</string>
+    <string name="tags_header">TAGI</string>
+    <string name="new_tag_format">Nowy tag „%1$s”</string>
+    <string name="edit_tags">Edytuj tagi</string>
+    <string name="no_tags">Brak tagów (kliknij, aby dodać)</string>
+
+    <!-- Logs Section in Settings -->
+    <string name="logs_section_title">Logi</string>
+    <string name="logs_enabled_label">Włączone logowanie</string>
+    <string name="logs_disabled_label">Logowanie wyłączone</string>
+    <string name="logs_clear_button">Wyczyść logi</string>
+    <string name="logs_empty">Brak zarejestrowanych logów</string>
+    <string name="logs_filter_all">Wszystkie</string>
+    <string name="logs_filter_api">API</string>
+    <string name="logs_filter_state">Stany</string>
+    <string name="logs_filter_refresh">Odświeżenia</string>
+    <string name="logs_filter_func">Funkcje</string>
+    <string name="logs_search_hint">Szukaj w logach…</string>
+    <string name="logs_count">Liczba logów: %1$d</string>
 </resources>

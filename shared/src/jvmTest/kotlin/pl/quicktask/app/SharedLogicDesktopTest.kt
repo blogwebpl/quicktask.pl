@@ -1,8 +1,8 @@
 package pl.quicktask.app
 
 import kotlinx.coroutines.runBlocking
-import pl.quicktask.app.auth.AuthRepository
-import pl.quicktask.app.auth.JvmOpaqueManager
+import pl.quicktask.app.auth.data.AuthRepository
+import pl.quicktask.app.auth.crypto.JvmOpaqueManager
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull

@@ -1,0 +1,8 @@
+<resources>
+    <string name="update_checking">Sprawdzanie aktualizacji…</string>
+    <string name="update_required_title">Wymagana aktualizacja</string>
+    <string name="update_required_message">W Google Play jest dostępna nowa wersja. Zaktualizuj aplikację, aby kontynuować.</string>
+    <string name="update_action">Aktualizuj teraz</string>
+    <string name="update_open_store">Otwórz Google Play</string>
+    <string name="update_store_unavailable">Nie można otworzyć sklepu. Sprawdź, czy masz Google Play lub przeglądarkę, i spróbuj ponownie.</string>
+</resources>

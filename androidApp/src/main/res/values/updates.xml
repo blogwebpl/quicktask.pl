@@ -1,0 +1,8 @@
+<resources>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_message">A new version is available on Google Play. Update the app to continue.</string>
+    <string name="update_action">Update now</string>
+    <string name="update_open_store">Open Google Play</string>
+    <string name="update_store_unavailable">Unable to open the store. Check that Google Play or a browser is installed and try again.</string>
+</resources>

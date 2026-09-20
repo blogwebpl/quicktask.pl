@@ -14,6 +14,8 @@ This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM
 
 ### Running the apps
 
+On Windows, use `.\gradlew.bat`. If neither `JAVA_HOME` nor Java on `PATH` is available, the wrapper automatically uses `STUDIO_JDK` or Android Studio's bundled JDK from its standard system or per-user installation directory. No global environment change is required. Restricted automation environments may require approval to access that JDK and Gradle's caches; see [AGENTS.md](./AGENTS.md).
+
 Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
 
 - Android app: `./gradlew :androidApp:assembleDebug`
@@ -27,9 +29,25 @@ Use the run configurations provided by the run widget in your IDE's toolbar. You
 
 ### Android releases
 
-Android's internal `versionCode` is generated automatically from the build time. Every newly built release bundle therefore gets a number greater than previously generated bundles and can be uploaded to Google Play without editing `build.gradle.kts`.
+To upload directly from Android Studio to Google Play **internal testing**, fill in the ignored `android-publish.properties` file with your existing upload key alias and passwords. Then sync Gradle, select **Wyslij do testow Google Play** in the run configuration selector and click Run. This builds, signs and uploads the release bundle; it does not publish to production. Credentials must never be committed or shared. The configuration file is Git-ignored but still follows any Dropbox syncing settings of this directory.
 
-Create the Play Store bundle with `./gradlew :androidApp:bundleRelease`. For a reproducible build, override the generated number explicitly with `./gradlew :androidApp:bundleRelease -PandroidVersionCode=1234`.
+For a local check without uploading, run `./gradlew :androidApp:validatePlayUpload`. The upload task is `./gradlew :androidApp:publishReleaseBundle`.
+
+Publishing credentials use project-relative paths: `secrets/upload.keystore` and `secrets/play-service-account.json`. Both `secrets/` and `android-publish.properties` are Git-ignored. On another machine, transfer these files securely together with the project; they are not included when cloning the repository. Dropbox may sync them, so restrict access to the shared folder.
+
+During `publishReleaseBundle`, Gradle Play Publisher's `ResolutionStrategy.AUTO` reads the highest version code from Google Play and assigns the next available number before building the bundle. This works across machines and does not depend on their clocks. Do not publish simultaneously from multiple machines: Google Play does not reserve a number during the lookup, so concurrent uploads can conflict.
+
+Use `./gradlew :androidApp:publishReleaseBundle` or the Android Studio run configuration for uploads. Ordinary offline builds (`assembleDebug` or `bundleRelease`) use the local baseline code `1190` and do not obtain a new Google Play version code; do not manually upload these bundles.
+
+### Required Android updates
+
+Release builds check Google Play at startup and on returning to the foreground using Play In-App Updates (immediate mode). Any newer version available to the current user's Play account and release track blocks access to the app. Cancelling or failing the update leaves a mandatory update screen with retry and Google Play buttons. If immediate updates are unavailable, the user can update through the store.
+
+The required version code is saved locally, so restarting the app or losing connectivity cannot bypass an update already detected. The gate clears when that version or a newer one is installed. If the initial lookup fails or takes longer than 15 seconds and no required update is known, the app remains usable. Debug builds skip the check so local development does not require Google Play. This integration applies to Android only.
+
+To verify end to end, install a release containing this mechanism from Google Play internal testing, then publish a higher version code to the same track and account. Check startup, cancellation, retry, returning from the store, restarting offline after detection, and successful installation. A local debug APK cannot validate the Play update flow. Existing installations must first receive the release containing this mechanism.
+
+See [Google Play In-App Updates](https://developer.android.com/guide/playcore/in-app-updates/kotlin-java).
 
 ### Running tests
 
@@ -50,3 +68,23 @@ Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-mu
 
 We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
 If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+
+### Atomic inbox updates
+
+Deploy the backend supporting optional `addedFileIds` and `removedAttachmentIds`
+fields on `PATCH /inbox/:itemId` before releasing this client. New files are
+uploaded first; content and attachment references are then committed together.
+The client does not fall back to the older multi-request update flow. An unknown
+write outcome is reconciled by reading the server state, without repeating the
+write.
+
+Inbox lists combine an authoritative server snapshot with per-item pending
+operations. Refreshes and sync events preserve pending operations; a failure
+releases only the overlay owned by that operation.
+
+The backend's PostgreSQL integration test is
+`test/inbox-atomic.e2e-spec.ts`. Set `TEST_DATABASE_URL`, then run in `server`:
+`npm run test:e2e -- --runInBand --runTestsByPath test/inbox-atomic.e2e-spec.ts`.
+It creates and removes a unique `test_inbox_atomic_*` schema and does not use
+application tables in the default schema. The database user needs permission to
+create schemas; the existing `pgcrypto` extension must be available.

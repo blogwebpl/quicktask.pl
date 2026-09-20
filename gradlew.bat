@@ -45,6 +45,20 @@ set JAVA_EXE=java.exe
 %JAVA_EXE% -version >NUL 2>&1
 if %ERRORLEVEL% equ 0 goto execute
 
+@rem Fall back to Android Studio's bundled JDK when JAVA_HOME and PATH are unset.
+if defined STUDIO_JDK if exist "%STUDIO_JDK%\bin\java.exe" (
+    set "JAVA_HOME=%STUDIO_JDK%"
+    goto findJavaFromJavaHome
+)
+if exist "%ProgramFiles%\Android\Android Studio\jbr\bin\java.exe" (
+    set "JAVA_HOME=%ProgramFiles%\Android\Android Studio\jbr"
+    goto findJavaFromJavaHome
+)
+if exist "%LOCALAPPDATA%\Programs\Android Studio\jbr\bin\java.exe" (
+    set "JAVA_HOME=%LOCALAPPDATA%\Programs\Android Studio\jbr"
+    goto findJavaFromJavaHome
+)
+
 echo. 1>&2
 echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2
 echo. 1>&2

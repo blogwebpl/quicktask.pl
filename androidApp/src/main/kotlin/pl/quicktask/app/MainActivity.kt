@@ -9,15 +9,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ProcessLifecycleOwner
-import pl.quicktask.app.auth.AppContext
-import pl.quicktask.app.sync.SyncLifecycleObserver
+import pl.quicktask.app.auth.session.AppContext
+import pl.quicktask.app.sync.platform.SyncLifecycleObserver
 
 class MainActivity : ComponentActivity() {
+    private lateinit var updateGate: RequiredUpdateGate
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
-        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
-            splashScreenViewProvider.remove()
-        }
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -31,11 +30,28 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         AppContext.applicationContext = applicationContext
-        ProcessLifecycleOwner.get().lifecycle.addObserver(SyncLifecycleObserver())
+        updateGate = RequiredUpdateGate(this)
+        splashScreen.setKeepOnScreenCondition { updateGate.checking }
+        updateGate.check()
+        ProcessLifecycleOwner.get().lifecycle.addObserver(SyncLifecycleObserver(pl.quicktask.app.di.sharedAppModule.sync))
 
         setContent {
-            App()
+            if (updateGate.state == UpdateGateState.Ready) {
+                App()
+            } else {
+                RequiredUpdateScreen(updateGate)
+            }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateGate.check()
+    }
+
+    override fun onDestroy() {
+        updateGate.dispose()
+        super.onDestroy()
     }
 }
 

@@ -1,6 +1,6 @@
 package pl.quicktask.app
 
-import pl.quicktask.app.auth.UserKeyMaterialDto
+import pl.quicktask.app.auth.crypto.UserKeyMaterialDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
