@@ -27,16 +27,19 @@ fun MainLayout(
 
     val inboxItems by module.items.store.itemsFlow.collectAsStateWithLifecycle(emptyList())
     val trashItems by module.items.store.trashItemsFlow.collectAsStateWithLifecycle(emptyList())
+    val projects by module.items.store.projectsFlow.collectAsStateWithLifecycle(emptyList())
 
     LaunchedEffect(module) {
         module.items.inbox.getItems()
         module.items.trash.getTrashItems()
+        module.items.projects.getProjects()
     }
 
-    val itemCounts = remember(inboxItems, trashItems) {
+    val itemCounts = remember(inboxItems, trashItems, projects) {
         mapOf(
             Screen.INBOX to inboxItems.size,
             Screen.TRASH to trashItems.size,
+            Screen.PROJECTS to projects.size,
         )
     }
 

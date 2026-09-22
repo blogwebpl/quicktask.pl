@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,7 +42,6 @@ import todo.shared.generated.resources.task_close_description
 import todo.shared.generated.resources.task_edit_title
 import todo.shared.generated.resources.task_new_title
 import todo.shared.generated.resources.task_note_label
-import todo.shared.generated.resources.task_optional_label
 import todo.shared.generated.resources.task_save_button
 import todo.shared.generated.resources.task_title_placeholder
 import todo.shared.generated.resources.task_title_prompt
@@ -90,7 +88,7 @@ internal fun TitleTextField(
     focusRequester: FocusRequester,
     onDone: () -> Unit = {},
 ) {
-    val titleLabel = stringResource(Res.string.task_title_placeholder)
+    val titleLabel = stringResource(Res.string.task_title_placeholder) + " *"
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = titleLabel,
@@ -157,12 +155,6 @@ internal fun NoteTextField(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(noteLabel, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = stringResource(Res.string.task_optional_label),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
             BasicTextField(
                 value = value,

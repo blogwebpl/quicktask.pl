@@ -92,7 +92,7 @@ internal class InboxEditorController(
             runPendingItemMutation(
                 store, operation,
                 mutate = { repository.updateInboxItem(item, title, note, files, removedAttachmentIds) },
-                refresh = { repository.getItems(forceFetch = true) },
+                refresh = { repository.getItems(forceFetch = true, completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_update_item)) } },
                 onRefreshError = ::showRefreshError,
             )

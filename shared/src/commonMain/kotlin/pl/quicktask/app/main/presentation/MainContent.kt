@@ -9,8 +9,6 @@ import pl.quicktask.app.nextactions.presentation.NextActionsScreen
 import pl.quicktask.app.now.presentation.NowScreen
 import pl.quicktask.app.settings.presentation.SettingsScreen
 import pl.quicktask.app.trash.presentation.TrashScreen
-import todo.shared.generated.resources.Res
-import todo.shared.generated.resources.app_name
 
 @Composable
 fun MainContent(
@@ -38,6 +36,18 @@ fun MainContent(
                 onOpenDrawer = onOpenDrawer,
             )
         }
+        Screen.SCHEDULED -> {
+            pl.quicktask.app.scheduled.presentation.ScheduledScreen(
+                module = module,
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
+        Screen.PROJECTS -> {
+            pl.quicktask.app.projects.presentation.ProjectsScreen(
+                module = module,
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
         Screen.TRASH -> {
             TrashScreen(
                 module = module,
@@ -51,12 +61,11 @@ fun MainContent(
             )
         }
         else -> {
-            val appName = stringResource(Res.string.app_name)
             val screenTitle = stringResource(currentScreen.titleRes)
             val showFab = (currentScreen != Screen.COMPLETED) && (currentScreen != Screen.TRASH)
 
             GenericTaskScreen(
-                title = "$appName - $screenTitle",
+                title = screenTitle,
                 onOpenDrawer = onOpenDrawer,
                 showFab = showFab,
                 onFabClick = onFabClick,

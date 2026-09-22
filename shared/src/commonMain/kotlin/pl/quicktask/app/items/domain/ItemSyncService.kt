@@ -42,6 +42,9 @@ class ItemSyncService(
         when {
             dto.location == "inbox" -> store.applyInbox(mapper.syncInbox(item), targetId)
             dto.location == "trash" -> store.applyTrash(mapper.syncTrash(item), targetId)
+            dto.location == "scheduled" || item.isScheduled -> {
+                store.applyScheduledTask(mapper.syncScheduledTask(item), targetId)
+            }
             dto.location == "next-actions" || dto.location == "next-action" || item.isNextAction -> {
                 store.applyNextAction(mapper.syncNextAction(item), targetId)
             }
@@ -49,7 +52,14 @@ class ItemSyncService(
         }
     }
 
-    override suspend fun refreshActiveViews() = refreshViews()
+    override suspend fun refreshActiveViews() {
+        refreshViews()
+        val generation = store.generation
+        val tasks = api.request(HttpMethod.Get, "inbox/scheduled")
+            .body<List<pl.quicktask.app.scheduled.model.ScheduledTaskDto>>()
+            .map { mapper.scheduledTask(it) }
+        store.cacheScheduledTasks(tasks, generation)
+    }
 
     override suspend fun refreshViews(inbox: Boolean, trash: Boolean) {
         store.invalidateCache()

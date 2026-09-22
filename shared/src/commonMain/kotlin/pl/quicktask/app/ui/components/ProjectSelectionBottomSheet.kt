@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,6 +85,7 @@ fun ProjectSelectionBottomSheet(
     var currentSelectedProjectId by remember { mutableStateOf(selectedProjectId) }
     val createdProjects = remember { mutableStateListOf<DecryptedProject>() }
     var isCreatingProject by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val allProjects = remember(availableProjects, createdProjects.toList()) {
         val existingIds = availableProjects.map { it.projectId }.toSet()
@@ -100,9 +102,13 @@ fun ProjectSelectionBottomSheet(
     val showCreateOption = trimmedQuery.isNotBlank() &&
         !allProjects.any { it.title.equals(trimmedQuery, ignoreCase = true) }
 
+    val isNewProjectSelected = showCreateOption &&
+        (currentSelectedProjectId == null || filteredProjects.none { it.projectId == currentSelectedProjectId })
+
     fun createAndSelectProject() {
         if (trimmedQuery.isNotBlank() && showCreateOption && !isCreatingProject) {
             isCreatingProject = true
+            errorMessage = null
             coroutineScope.launch {
                 try {
                     val created = onCreateProject?.invoke(trimmedQuery)
@@ -114,9 +120,12 @@ fun ProjectSelectionBottomSheet(
                         searchQuery = ""
                         onConfirm(created.projectId)
                         onDismiss()
+                    } else {
+                        errorMessage = "Nie udało się utworzyć projektu. Spróbuj ponownie."
                     }
                 } catch (e: Exception) {
                     println("Error creating project: $e")
+                    errorMessage = e.message ?: "Wystąpił błąd podczas tworzenia projektu."
                 } finally {
                     isCreatingProject = false
                 }
@@ -160,7 +169,7 @@ fun ProjectSelectionBottomSheet(
 
                 Button(
                     onClick = {
-                        if (showCreateOption) {
+                        if (isNewProjectSelected) {
                             createAndSelectProject()
                         } else {
                             onConfirm(currentSelectedProjectId)
@@ -170,7 +179,15 @@ fun ProjectSelectionBottomSheet(
                     enabled = !isCreatingProject,
                     shape = CircleShape,
                 ) {
-                    Text(stringResource(Res.string.task_save_button), style = MaterialTheme.typography.labelLarge)
+                    if (isCreatingProject) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(Res.string.task_save_button), style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
 
@@ -179,14 +196,20 @@ fun ProjectSelectionBottomSheet(
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = {
+                    searchQuery = it
+                    errorMessage = null
+                },
                 placeholder = { Text(stringResource(Res.string.search_or_create_project)) },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null)
                 },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     {
-                        IconButton(onClick = { searchQuery = "" }) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            errorMessage = null
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = stringResource(Res.string.action_clear),
@@ -204,13 +227,30 @@ fun ProjectSelectionBottomSheet(
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { createAndSelectProject() },
+                    onDone = {
+                        if (isNewProjectSelected) {
+                            createAndSelectProject()
+                        } else {
+                            onConfirm(currentSelectedProjectId)
+                            onDismiss()
+                        }
+                    },
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .focusRequester(focusRequester),
             )
+
+            if (errorMessage != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = errorMessage!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -236,7 +276,7 @@ fun ProjectSelectionBottomSheet(
                 item {
                     ProjectRowItem(
                         title = stringResource(Res.string.no_project),
-                        isSelected = currentSelectedProjectId == null,
+                        isSelected = !isNewProjectSelected && currentSelectedProjectId == null,
                         onClick = {
                             currentSelectedProjectId = null
                             onConfirm(null)
@@ -246,7 +286,7 @@ fun ProjectSelectionBottomSheet(
                 }
 
                 items(filteredProjects, key = { it.projectId }) { proj ->
-                    val isSelected = proj.projectId == currentSelectedProjectId
+                    val isSelected = !isNewProjectSelected && proj.projectId == currentSelectedProjectId
                     ProjectRowItem(
                         title = proj.title,
                         isSelected = isSelected,
@@ -267,23 +307,32 @@ fun ProjectSelectionBottomSheet(
                                     createAndSelectProject()
                                 },
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.Transparent,
+                            color = if (isNewProjectSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (isNewProjectSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp),
-                                )
+                                if (isCreatingProject) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = if (isNewProjectSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = if (isNewProjectSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
                                 Text(
                                     text = stringResource(Res.string.new_project_format, trimmedQuery),
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (isNewProjectSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 )
                             }
                         }

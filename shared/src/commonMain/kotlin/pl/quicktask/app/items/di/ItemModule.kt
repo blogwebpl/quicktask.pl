@@ -22,6 +22,8 @@ import pl.quicktask.app.now.data.NowRepository
 import pl.quicktask.app.settings.data.SettingsOperations
 import pl.quicktask.app.settings.data.SettingsRepository
 import pl.quicktask.app.trash.data.TrashRepository
+import pl.quicktask.app.scheduled.data.ScheduledRepository
+import pl.quicktask.app.scheduled.data.ScheduledOperations
 
 /** Composition root: every item operation shares the same session, keys and lists. */
 class ItemModule(
@@ -42,9 +44,11 @@ class ItemModule(
     val files: FileOperations = fileOperations ?: FilesRepository(api, keysProvider)
     val inbox = InboxRepository(api, mapper, store, queries, files)
     val nextActions = NextActionsRepository(api, mapper, store, sync, files)
+    val scheduled: ScheduledOperations = ScheduledRepository(api, mapper, store, sync, files)
     val now: NowOperations = NowRepository(api, mapper, sync, store)
     val trash = TrashRepository(api, store, queries, sync)
     val completed = CompletedItemsRepository(api, mapper, sync)
+    val projects: pl.quicktask.app.projects.data.ProjectsOperations = pl.quicktask.app.projects.data.ProjectsRepository(api, mapper, store, sync, files)
     val lifecycle = ItemLifecycleService(api, sync)
     val settings: SettingsOperations = settingsOperations ?: SettingsRepository(api)
 }

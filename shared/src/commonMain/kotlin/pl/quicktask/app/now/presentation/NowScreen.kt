@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,7 +20,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -38,6 +35,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import pl.quicktask.app.di.AppModule
 import pl.quicktask.app.nextactions.presentation.dialogs.AddEditNextActionDialog
+import pl.quicktask.app.ui.components.AppTopBar
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.ic_sun
 import todo.shared.generated.resources.now_available_next_actions
@@ -69,16 +67,9 @@ fun NowScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.screen_now)) },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = null,
-                        )
-                    }
-                },
+            AppTopBar(
+                title = stringResource(Res.string.screen_now),
+                onOpenDrawer = onOpenDrawer,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

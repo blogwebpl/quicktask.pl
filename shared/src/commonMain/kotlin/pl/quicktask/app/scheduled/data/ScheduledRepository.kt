@@ -1,0 +1,402 @@
+package pl.quicktask.app.scheduled.data
+
+import pl.quicktask.app.scheduled.model.RecurrenceRule
+
+import dev.whyoleg.cryptography.algorithms.AES
+import io.ktor.client.call.body
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpMethod
+import io.ktor.http.contentType
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import pl.quicktask.app.auth.model.ApiException
+import pl.quicktask.app.items.data.FileOperations
+import pl.quicktask.app.items.domain.ItemCryptoMapper
+import pl.quicktask.app.items.domain.ItemViewRefresher
+import pl.quicktask.app.items.model.AttachmentLimitException
+import pl.quicktask.app.items.model.CreateInboxItemResponseDto
+import pl.quicktask.app.items.model.InboxItem
+import pl.quicktask.app.items.model.InputFile
+import pl.quicktask.app.items.model.MAX_ATTACHMENTS
+import pl.quicktask.app.items.model.UncertainItemWriteException
+import pl.quicktask.app.items.model.itemResult
+import pl.quicktask.app.items.store.ItemStore
+import pl.quicktask.app.network.client.AuthenticatedApiClient
+import pl.quicktask.app.nextactions.model.NextActionOptions
+import pl.quicktask.app.nextactions.model.NextActionOptionsResponseDto
+import pl.quicktask.app.nextactions.model.NextActionContext
+import pl.quicktask.app.nextactions.model.NextActionTag
+import pl.quicktask.app.scheduled.model.ChangeDateRequestDto
+import pl.quicktask.app.scheduled.model.ChangeTagsRequestDto
+import pl.quicktask.app.scheduled.model.ConvertInboxToScheduledRequestDto
+import pl.quicktask.app.scheduled.model.CreateScheduledTaskRequestDto
+import pl.quicktask.app.scheduled.model.ScheduledTask
+import pl.quicktask.app.scheduled.model.ScheduledTaskDto
+import pl.quicktask.app.scheduled.model.UpdateScheduledTaskRequestDto
+
+interface ScheduledOperations {
+    suspend fun getScheduledTasks(forceFetch: Boolean = false): Result<List<ScheduledTask>>
+    suspend fun getNextActionOptions(): Result<NextActionOptions>
+    suspend fun createScheduledTask(
+        recurrence: RecurrenceRule? = null,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String? = null,
+        dueAt: String? = null,
+        projectId: String? = null,
+        contextIds: List<String> = emptyList(),
+        newContextNames: List<String> = emptyList(),
+        tagIds: List<String> = emptyList(),
+        newTagNames: List<String> = emptyList(),
+        files: List<InputFile> = emptyList(),
+        onProgress: ((Float) -> Unit)? = null,
+        itemKey: AES.GCM.Key? = null,
+    ): Result<String>
+    suspend fun convertFromInbox(
+        recurrence: RecurrenceRule? = null,
+        item: InboxItem,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String? = null,
+        dueAt: String? = null,
+        projectId: String? = null,
+        contextIds: List<String> = emptyList(),
+        newContextNames: List<String> = emptyList(),
+        tagIds: List<String> = emptyList(),
+        newTagNames: List<String> = emptyList(),
+        newFiles: List<InputFile> = emptyList(),
+        removedAttachmentIds: List<String> = emptyList(),
+    ): Result<Unit>
+    suspend fun updateScheduledTask(
+        recurrence: RecurrenceRule? = null,
+        item: ScheduledTask,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String? = null,
+        dueAt: String? = null,
+        projectId: String? = null,
+        contextIds: List<String> = emptyList(),
+        newContextNames: List<String> = emptyList(),
+        tagIds: List<String> = emptyList(),
+        newTagNames: List<String> = emptyList(),
+        newFiles: List<InputFile> = emptyList(),
+        removedAttachmentIds: List<String> = emptyList(),
+    ): Result<Unit>
+    suspend fun changeDateDuringReview(itemId: String, scheduledAt: String): Result<Unit>
+    suspend fun markTaskAsReviewed(itemId: String): Result<Unit>
+    suspend fun changeTaskDueDate(itemId: String, dueAt: String): Result<Unit>
+    suspend fun completeTask(itemId: String): Result<Unit>
+    suspend fun cancelTask(itemId: String): Result<Unit>
+    suspend fun moveToSomedayMaybe(itemId: String): Result<Unit>
+    suspend fun restoreToInbox(itemId: String): Result<Unit>
+    suspend fun deleteScheduledTask(itemId: String): Result<Unit>
+    suspend fun changeTags(itemId: String, tagIds: List<String>, newTagNames: List<String>): Result<Unit>
+}
+
+class ScheduledRepository(
+    private val api: AuthenticatedApiClient,
+    private val mapper: ItemCryptoMapper,
+    private val store: ItemStore,
+    private val refresher: ItemViewRefresher,
+    private val filesRepository: FileOperations,
+) : ScheduledOperations {
+
+    override suspend fun getScheduledTasks(forceFetch: Boolean): Result<List<ScheduledTask>> {
+        if (!forceFetch && store.isScheduledCacheValid) {
+            return Result.success(store.scheduledTasksFlow.value)
+        }
+        return itemResult {
+            val generation = store.generation
+            val dtos = api.request(HttpMethod.Get, "inbox/scheduled").body<List<ScheduledTaskDto>>()
+            val items = dtos.map { mapper.scheduledTask(it) }
+            store.cacheScheduledTasks(items, generation)
+            store.scheduledTasksFlow.value
+        }
+    }
+
+    override suspend fun getNextActionOptions(): Result<NextActionOptions> = itemResult {
+        val dto = api.request(HttpMethod.Get, "inbox/next-action-options").body<NextActionOptionsResponseDto>()
+        val projects = dto.projects.map { mapper.project(it) }
+        val contexts = dto.contexts.map { NextActionContext(it.contextId, it.name, it.lat, it.lon, it.radius) }
+        val tags = dto.tags.map { NextActionTag(it.tagId, it.name) }
+        NextActionOptions(projects, contexts, tags)
+    }
+
+    override suspend fun createScheduledTask(
+        recurrence: RecurrenceRule?,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String?,
+        dueAt: String?,
+        projectId: String?,
+        contextIds: List<String>,
+        newContextNames: List<String>,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        files: List<InputFile>,
+        onProgress: ((Float) -> Unit)?,
+        itemKey: AES.GCM.Key?
+    ): Result<String> = itemResult {
+        if (files.size > MAX_ATTACHMENTS) throw AttachmentLimitException()
+        val uploadedIds = mutableListOf<String>()
+        var requestSent = false
+        try {
+            files.forEachIndexed { index, file ->
+                val id = filesRepository.uploadEncryptedFile(file.fileName, file.mimeType, file.bytes) { progress ->
+                    onProgress?.invoke((index.toFloat() + progress) / files.size.toFloat())
+                }.getOrThrow()
+                uploadedIds.add(id)
+            }
+            if (files.isNotEmpty()) onProgress?.invoke(1f)
+            val request = mapper.createScheduledTaskRequest(
+                title = title,
+                note = note,
+                recurrence = recurrence,
+                scheduledAt = scheduledAt,
+                deferUntil = deferUntil,
+                dueAt = dueAt,
+                projectId = projectId,
+                contextIds = contextIds,
+                newContextNames = newContextNames,
+                tagIds = tagIds,
+                newTagNames = newTagNames,
+                fileIds = uploadedIds,
+                itemKey = itemKey,
+            )
+            requestSent = true
+            val response = api.request(HttpMethod.Post, "items") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            store.invalidateCache()
+            refresher.refreshViews(inbox = false)
+            response.body<CreateInboxItemResponseDto>().itemId
+        } catch (error: Exception) {
+            store.invalidateCache()
+            cleanupUploads(uploadedIds)
+            if (requestSent && error !is ApiException && error !is CancellationException) {
+                throw UncertainItemWriteException(error)
+            }
+            throw error
+        }
+    }
+
+    override suspend fun convertFromInbox(
+        recurrence: RecurrenceRule?,
+        item: InboxItem,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String?,
+        dueAt: String?,
+        projectId: String?,
+        contextIds: List<String>,
+        newContextNames: List<String>,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        newFiles: List<InputFile>,
+        removedAttachmentIds: List<String>,
+    ): Result<Unit> = itemResult {
+        mutateScheduledTask(
+            method = HttpMethod.Post,
+            path = "inbox/${item.itemId}/scheduled",
+            itemKey = item.itemKey,
+            existingAttachmentCount = item.attachments.size,
+            title = title,
+            note = note,
+            recurrence = recurrence,
+            scheduledAt = scheduledAt,
+            deferUntil = deferUntil,
+            dueAt = dueAt,
+            projectId = projectId,
+            contextIds = contextIds,
+            newContextNames = newContextNames,
+            tagIds = tagIds,
+            newTagNames = newTagNames,
+            newFiles = newFiles,
+            removedAttachmentIds = removedAttachmentIds,
+        )
+        store.invalidateCache()
+        refresher.refreshViews(inbox = true)
+    }
+
+    override suspend fun updateScheduledTask(
+        recurrence: RecurrenceRule?,
+        item: ScheduledTask,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String?,
+        dueAt: String?,
+        projectId: String?,
+        contextIds: List<String>,
+        newContextNames: List<String>,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        newFiles: List<InputFile>,
+        removedAttachmentIds: List<String>,
+    ): Result<Unit> = itemResult {
+        mutateScheduledTask(
+            method = HttpMethod.Patch,
+            path = "inbox/${item.itemId}/scheduled",
+            itemKey = item.itemKey,
+            existingAttachmentCount = item.attachments.size,
+            title = title,
+            note = note,
+            recurrence = recurrence,
+            scheduledAt = scheduledAt,
+            deferUntil = deferUntil,
+            dueAt = dueAt,
+            projectId = projectId,
+            contextIds = contextIds,
+            newContextNames = newContextNames,
+            tagIds = tagIds,
+            newTagNames = newTagNames,
+            newFiles = newFiles,
+            removedAttachmentIds = removedAttachmentIds,
+        )
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun changeDateDuringReview(itemId: String, scheduledAt: String): Result<Unit> = itemResult {
+        val request = ChangeDateRequestDto(scheduledAt = scheduledAt)
+        api.request(HttpMethod.Patch, "inbox/$itemId/scheduled/review") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun markTaskAsReviewed(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Post, "inbox/$itemId/task/review")
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun changeTaskDueDate(itemId: String, dueAt: String): Result<Unit> = itemResult {
+        val request = ChangeDateRequestDto(dueAt = dueAt)
+        api.request(HttpMethod.Patch, "inbox/$itemId/task/due-at") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun completeTask(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Post, "inbox/$itemId/task/complete")
+        store.invalidateCache()
+        getScheduledTasks(forceFetch = true).getOrThrow()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun cancelTask(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Post, "inbox/$itemId/task/cancel")
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun moveToSomedayMaybe(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Post, "inbox/$itemId/task/someday-maybe")
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    override suspend fun restoreToInbox(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Post, "inbox/$itemId/scheduled/restore-to-inbox")
+        store.invalidateCache()
+        refresher.refreshViews(inbox = true)
+    }
+
+    override suspend fun deleteScheduledTask(itemId: String): Result<Unit> = itemResult {
+        api.request(HttpMethod.Delete, "inbox/$itemId/scheduled")
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false, trash = true)
+    }
+
+    override suspend fun changeTags(itemId: String, tagIds: List<String>, newTagNames: List<String>): Result<Unit> = itemResult {
+        val request = ChangeTagsRequestDto(tagIds = tagIds, newTagNames = newTagNames)
+        api.request(HttpMethod.Put, "inbox/$itemId/tags") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        store.invalidateCache()
+        refresher.refreshViews(inbox = false)
+    }
+
+    private suspend fun cleanupUploads(ids: List<String>) = withContext(NonCancellable) {
+        for (id in ids) {
+            try {
+                filesRepository.deleteUploadedFile(id)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private suspend fun mutateScheduledTask(
+        method: HttpMethod,
+        path: String,
+        itemKey: AES.GCM.Key,
+        existingAttachmentCount: Int,
+        title: String,
+        note: String,
+        recurrence: RecurrenceRule?,
+        scheduledAt: String,
+        deferUntil: String?,
+        dueAt: String?,
+        projectId: String?,
+        contextIds: List<String>,
+        newContextNames: List<String>,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        newFiles: List<InputFile>,
+        removedAttachmentIds: List<String>,
+    ) {
+        val remainingAttachmentCount = existingAttachmentCount - removedAttachmentIds.size
+        if (remainingAttachmentCount + newFiles.size > MAX_ATTACHMENTS) throw AttachmentLimitException()
+        val uploadedIds = mutableListOf<String>()
+        var requestSent = false
+        try {
+            newFiles.forEach { file ->
+                uploadedIds += filesRepository.uploadEncryptedFile(file.fileName, file.mimeType, file.bytes).getOrThrow()
+            }
+            val request: ConvertInboxToScheduledRequestDto = mapper.updateScheduledTaskRequest(
+                itemKey = itemKey,
+                title = title,
+                note = note,
+                recurrence = recurrence,
+                scheduledAt = scheduledAt,
+                deferUntil = deferUntil,
+                dueAt = dueAt,
+                projectId = projectId,
+                contextIds = contextIds,
+                newContextNames = newContextNames,
+                tagIds = tagIds,
+                newTagNames = newTagNames,
+            ).copy(
+                addedFileIds = uploadedIds.ifEmpty { null },
+                removedAttachmentIds = removedAttachmentIds.ifEmpty { null },
+            )
+            requestSent = true
+            api.request(method, path) {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        } catch (error: Exception) {
+            store.invalidateCache()
+            cleanupUploads(uploadedIds)
+            if (requestSent && error !is ApiException && error !is CancellationException) {
+                throw UncertainItemWriteException(error)
+            }
+            throw error
+        }
+    }
+}

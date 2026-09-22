@@ -1,5 +1,7 @@
 package pl.quicktask.app.items.domain
 
+import pl.quicktask.app.scheduled.model.RecurrenceRule
+
 import pl.quicktask.app.items.model.decryptItem
 
 import pl.quicktask.app.items.model.AttachmentMetadataState
@@ -24,6 +26,10 @@ import pl.quicktask.app.nextactions.model.NextActionProjectDto
 import pl.quicktask.app.nextactions.model.UpdateNextActionRequestDto
 import pl.quicktask.app.now.model.NowItem
 import pl.quicktask.app.now.model.NowItemDto
+import pl.quicktask.app.scheduled.model.CreateScheduledTaskRequestDto
+import pl.quicktask.app.scheduled.model.ScheduledTask
+import pl.quicktask.app.scheduled.model.ScheduledTaskDto
+import pl.quicktask.app.scheduled.model.UpdateScheduledTaskRequestDto
 
 
 import dev.whyoleg.cryptography.algorithms.AES
@@ -135,6 +141,27 @@ class ItemCryptoMapper(
         )
     }
 
+    suspend fun scheduledTask(dto: ScheduledTaskDto): ScheduledTask {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        val decryptedProject = dto.project?.let { project(it) }
+        return ScheduledTask(
+            recurrence = dto.recurrence,
+            itemId = dto.itemId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+            project = decryptedProject,
+            dueAt = dto.dueAt,
+            contexts = dto.contexts,
+            scheduledAt = dto.scheduledAt,
+            deferUntil = dto.deferUntil,
+        )
+    }
+
     suspend fun nowItem(dto: NowItemDto): NowItem {
         val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
         val decryptedProject = dto.project?.let { project(it) }
@@ -178,6 +205,97 @@ class ItemCryptoMapper(
             project = decryptedProject,
             dueAt = dto.dueAt,
             contexts = dto.contexts.map { NextActionContextDto(it.contextId, it.name, it.lat, it.lon, it.radius) },
+        )
+    }
+
+    suspend fun syncScheduledTask(dto: SyncStateItemDto): ScheduledTask {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        val decryptedProject = dto.project?.let {
+            project(NextActionProjectDto(it.projectId, it.encryptedTitle, it.encryptedItemKey))
+        }
+        return ScheduledTask(
+            recurrence = dto.recurrence,
+            itemId = dto.itemId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+            project = decryptedProject,
+            dueAt = dto.dueAt,
+            contexts = dto.contexts.map { NextActionContextDto(it.contextId, it.name, it.lat, it.lon, it.radius) },
+            scheduledAt = requireNotNull(dto.scheduledAt) { "Scheduled sync item is missing scheduledAt" },
+            deferUntil = dto.deferUntil,
+        )
+    }
+
+    suspend fun projectTask(dto: pl.quicktask.app.projects.model.ProjectTaskDto): pl.quicktask.app.projects.model.DecryptedProjectTask {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        return pl.quicktask.app.projects.model.DecryptedProjectTask(
+            itemId = dto.itemId,
+            taskId = dto.taskId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+            recurrence = dto.recurrence,
+            gtdState = dto.gtdState,
+            dueAt = dto.dueAt,
+            deferUntil = dto.deferUntil,
+            scheduledAt = dto.scheduledAt,
+            waitingFor = dto.waitingFor,
+            waitingSince = dto.waitingSince,
+            followUpAt = dto.followUpAt,
+            reviewedAt = dto.reviewedAt,
+            contexts = dto.contexts,
+        )
+    }
+
+    suspend fun projectWithTasks(dto: pl.quicktask.app.projects.model.ProjectWithTasksDto): pl.quicktask.app.projects.model.ProjectWithTasks {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        val decryptedTasks = dto.tasks.map { projectTask(it) }
+        return pl.quicktask.app.projects.model.ProjectWithTasks(
+            itemId = dto.itemId,
+            projectId = dto.projectId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+            dueAt = dto.dueAt,
+            tasks = decryptedTasks,
+        )
+    }
+
+    suspend fun createWaitingTaskRequest(
+        title: String,
+        note: String = "",
+        projectId: String? = null,
+        dueAt: String? = null,
+        waitingFor: String,
+        followUpAt: String? = null,
+        fileIds: List<String>? = null,
+        itemKey: AES.GCM.Key? = null,
+    ): pl.quicktask.app.projects.model.CreateWaitingTaskRequestDto {
+        val keys = keysProvider.getUserKeys()
+        val key = itemKey ?: createItemKey()
+        return pl.quicktask.app.projects.model.CreateWaitingTaskRequestDto(
+            type = "WAITING",
+            encryptedTitle = encryptText(key, title),
+            encryptedItemKey = wrapItemKey(keys.publicKey, key),
+            encryptedNote = if (note.isNotBlank()) encryptText(key, note) else null,
+            fileIds = fileIds?.ifEmpty { null },
+            projectId = projectId,
+            dueAt = dueAt,
+            waitingFor = waitingFor,
+            followUpAt = followUpAt,
         )
     }
 
@@ -235,6 +353,54 @@ class ItemCryptoMapper(
             encryptedNote = if (note.isNotBlank()) encryptText(key, note) else null,
         )
     }
+
+    suspend fun createScheduledTaskRequest(
+        recurrence: RecurrenceRule? = null,
+        title: String, note: String, scheduledAt: String, deferUntil: String? = null,
+        dueAt: String? = null, projectId: String? = null,
+        contextIds: List<String> = emptyList(), newContextNames: List<String> = emptyList(),
+        tagIds: List<String> = emptyList(), newTagNames: List<String> = emptyList(),
+        fileIds: List<String>? = null, itemKey: AES.GCM.Key? = null,
+    ): CreateScheduledTaskRequestDto {
+        val keys = keysProvider.getUserKeys()
+        val key = itemKey ?: createItemKey()
+        return CreateScheduledTaskRequestDto(
+            type = "SCHEDULED",
+            encryptedTitle = encryptText(key, title),
+            encryptedItemKey = wrapItemKey(keys.publicKey, key),
+            encryptedNote = if (note.isNotBlank()) encryptText(key, note) else null,
+            recurrence = recurrence,
+            scheduledAt = scheduledAt,
+            deferUntil = deferUntil,
+            projectId = projectId,
+            dueAt = dueAt,
+            contextIds = contextIds,
+            newContextNames = newContextNames,
+            tagIds = tagIds,
+            newTagNames = newTagNames,
+            fileIds = fileIds?.ifEmpty { null },
+        )
+    }
+
+    suspend fun updateScheduledTaskRequest(
+        recurrence: RecurrenceRule? = null,
+        itemKey: AES.GCM.Key, title: String, note: String, scheduledAt: String, deferUntil: String? = null,
+        projectId: String? = null, dueAt: String? = null,
+        contextIds: List<String> = emptyList(), newContextNames: List<String> = emptyList(),
+        tagIds: List<String> = emptyList(), newTagNames: List<String> = emptyList(),
+    ) = UpdateScheduledTaskRequestDto(
+        encryptedTitle = encryptText(itemKey, title),
+        encryptedNote = if (note.isNotBlank()) encryptText(itemKey, note) else null,
+        recurrence = recurrence,
+        scheduledAt = scheduledAt,
+        deferUntil = deferUntil,
+        projectId = projectId,
+        dueAt = dueAt,
+        contextIds = contextIds,
+        newContextNames = newContextNames,
+        tagIds = tagIds,
+        newTagNames = newTagNames,
+    )
 
     suspend fun updateNextActionRequest(
         itemKey: AES.GCM.Key, title: String, note: String,

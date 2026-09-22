@@ -1,5 +1,7 @@
 package pl.quicktask.app.items.model
 
+import pl.quicktask.app.scheduled.model.RecurrenceRule
+
 import dev.whyoleg.cryptography.algorithms.AES
 import kotlinx.serialization.Serializable
 
@@ -161,6 +163,7 @@ data class SyncStateTaskDto(
     val dueAt: String? = null,
     val deferUntil: String? = null,
     val scheduledAt: String? = null,
+    val recurrence: RecurrenceRule? = null,
     val waitingFor: String? = null,
     val waitingSince: String? = null,
     val followUpAt: String? = null,
@@ -188,6 +191,7 @@ data class SyncStateItemDto(
     val isScheduled: Boolean = false,
     val processedAt: String? = null,
     val scheduledAt: String? = null,
+    val recurrence: RecurrenceRule? = null,
     val deferUntil: String? = null,
     val dueAt: String? = null,
     val taskId: String? = null,

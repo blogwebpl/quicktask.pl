@@ -29,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.ktor.util.date.GMTDate
@@ -36,11 +38,10 @@ import io.ktor.util.date.getTimeMillis
 
 import org.jetbrains.compose.resources.stringResource
 import todo.shared.generated.resources.Res
+import todo.shared.generated.resources.action_clear
 import todo.shared.generated.resources.action_select
-import todo.shared.generated.resources.clear_due_date
 import todo.shared.generated.resources.date_calendar
 import todo.shared.generated.resources.date_next_week
-import todo.shared.generated.resources.date_placeholder
 import todo.shared.generated.resources.date_today
 import todo.shared.generated.resources.date_tomorrow
 import todo.shared.generated.resources.due_date_optional
@@ -77,7 +78,6 @@ fun DueDatePickerField(
     modifier: Modifier = Modifier,
 ) {
     var showDatePickerDialog by remember { mutableStateOf(false) }
-
     val datePart = if (value.contains('T')) value.substringBefore('T') else value
 
     val isToday = datePart.isNotEmpty() && datePart == todayIso()
@@ -165,45 +165,107 @@ fun DueDatePickerField(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
+        CalendarTextField(
             value = datePart,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            placeholder = { Text(stringResource(Res.string.date_placeholder)) },
-            trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (datePart.isNotBlank()) {
-                        IconButton(onClick = { onValueChange("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = stringResource(Res.string.clear_due_date))
-                        }
-                    }
-                    IconButton(onClick = { showDatePickerDialog = true }) {
-                        Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.open_calendar))
-                    }
-                }
-            },
+            allowClear = true,
+            showDatePickerDialog = showDatePickerDialog,
+            onShowDatePickerDialogChange = { showDatePickerDialog = it },
         )
     }
+}
 
-    if (showDatePickerDialog) {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LabeledDatePickerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    allowClear: Boolean = true,
+    enabled: Boolean = true,
+) {
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        CalendarTextField(
+            value = value.substringBefore('T'),
+            onValueChange = onValueChange,
+            allowClear = allowClear,
+            enabled = enabled,
+            showDatePickerDialog = showDatePickerDialog,
+            onShowDatePickerDialogChange = { showDatePickerDialog = it },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CalendarTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    allowClear: Boolean,
+    enabled: Boolean = true,
+    showDatePickerDialog: Boolean,
+    onShowDatePickerDialogChange: (Boolean) -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    fun closeDatePicker() {
+        onShowDatePickerDialogChange(false)
+        focusManager.clearFocus()
+    }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                if (enabled && focusState.isFocused && !showDatePickerDialog) {
+                    onShowDatePickerDialogChange(true)
+                }
+            },
+        enabled = enabled,
+        readOnly = true,
+        singleLine = true,
+        trailingIcon = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (allowClear && value.isNotBlank()) {
+                    IconButton(enabled = enabled, onClick = { onValueChange("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(Res.string.action_clear))
+                    }
+                }
+                IconButton(enabled = enabled, onClick = { onShowDatePickerDialogChange(true) }) {
+                    Icon(Icons.Default.DateRange, contentDescription = stringResource(Res.string.open_calendar))
+                }
+            }
+        },
+    )
+
+    if (showDatePickerDialog && enabled) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
-            onDismissRequest = { showDatePickerDialog = false },
+            onDismissRequest = ::closeDatePicker,
             confirmButton = {
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
                             onValueChange(formatIsoDate(millis))
                         }
-                        showDatePickerDialog = false
+                        closeDatePicker()
                     },
                 ) {
                     Text(stringResource(Res.string.action_select))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePickerDialog = false }) {
+                TextButton(onClick = ::closeDatePicker) {
                     Text(stringResource(Res.string.timer_cancel))
                 }
             },

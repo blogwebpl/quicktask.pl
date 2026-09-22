@@ -26,7 +26,12 @@ internal fun mapAuthErrorToState(error: Throwable): Pair<StringResource?, String
         400 -> Pair(Res.string.error_invalid_login_request, null)
         429 -> Pair(Res.string.error_too_many_requests, null)
         else -> {
-            Pair(Res.string.error_login_failed, null)
+            val details = error.message?.trim().orEmpty()
+            if (details.isNotEmpty()) {
+                Pair(null, "Wystąpił błąd logowania: $details")
+            } else {
+                Pair(Res.string.error_login_failed, null)
+            }
         }
     }
 }

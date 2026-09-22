@@ -37,10 +37,13 @@ import pl.quicktask.app.nextactions.model.NextActionOptions
 import pl.quicktask.app.ui.components.AppAddButton
 import pl.quicktask.app.ui.components.AppTopBar
 import todo.shared.generated.resources.Res
+import todo.shared.generated.resources.action_add_project
 import todo.shared.generated.resources.action_close
-import todo.shared.generated.resources.app_name
+import todo.shared.generated.resources.dialog_convert_to_project_question
+import todo.shared.generated.resources.dialog_convert_to_project_title
 import todo.shared.generated.resources.inbox_empty
 import todo.shared.generated.resources.screen_inbox
+import todo.shared.generated.resources.timer_cancel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,17 +53,18 @@ fun InboxScreen(
     viewModel: InboxViewModel = viewModel { InboxViewModel(module.items.inbox, module.items.store, module.items.lifecycle, module.items.completed) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val appName = stringResource(Res.string.app_name)
     val screenTitle = stringResource(Res.string.screen_inbox)
 
     val coroutineScope = rememberCoroutineScope()
     var itemToProcessToNextAction by remember { mutableStateOf<InboxItem?>(null) }
+    var itemToProcessToScheduled by remember { mutableStateOf<InboxItem?>(null) }
+    var itemToConvertToProject by remember { mutableStateOf<InboxItem?>(null) }
     var nextActionOptions by remember { mutableStateOf(NextActionOptions()) }
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "$appName - $screenTitle",
+                title = screenTitle,
                 onOpenDrawer = onOpenDrawer,
             )
         },
@@ -114,6 +118,17 @@ fun InboxScreen(
                                                     nextActionOptions = options
                                                 }
                                             }
+                                        }
+                                        ProcessDestination.SCHEDULED -> {
+                                            itemToProcessToScheduled = item
+                                            coroutineScope.launch {
+                                                module.items.scheduled.getNextActionOptions().onSuccess { options ->
+                                                    nextActionOptions = options
+                                                }
+                                            }
+                                        }
+                                        ProcessDestination.PROJECT -> {
+                                            itemToConvertToProject = item
                                         }
                                         else -> {
                                             // Pozostałe kategorie
@@ -219,6 +234,61 @@ fun InboxScreen(
             onCreateProject = { title ->
                 module.items.nextActions.createProject(title).getOrNull()
             },
+        )
+    }
+
+    itemToProcessToScheduled?.let { item ->
+        ProcessToScheduledDialog(
+            item = item,
+            options = nextActionOptions,
+            onDismiss = { itemToProcessToScheduled = null },
+            onConfirm = { title, note, scheduledAt, deferUntil, dueAt, projectId, contextIds, newContextNames, tagIds, newTagNames, recurrence, newFiles, removedAttachmentIds ->
+                viewModel.convertToScheduled(
+                    item = item,
+                    title = title,
+                    note = note,
+                    recurrence = recurrence,
+                    scheduledAt = scheduledAt,
+                    deferUntil = deferUntil,
+                    dueAt = dueAt,
+                    projectId = projectId,
+                    contextIds = contextIds,
+                    newContextNames = newContextNames,
+                    tagIds = tagIds,
+                    newTagNames = newTagNames,
+                    newFiles = newFiles,
+                    removedAttachmentIds = removedAttachmentIds,
+                    scheduledOperations = module.items.scheduled,
+                )
+                itemToProcessToScheduled = null
+            },
+            onCreateProject = { title ->
+                module.items.nextActions.createProject(title).getOrNull()
+            }
+        )
+    }
+
+    itemToConvertToProject?.let { item ->
+        pl.quicktask.app.ui.components.AppConfirmationDialog(
+            title = stringResource(Res.string.dialog_convert_to_project_title),
+            text = stringResource(Res.string.dialog_convert_to_project_question, item.title),
+            type = pl.quicktask.app.ui.components.DialogType.QUESTION,
+            buttons = listOf(
+                pl.quicktask.app.ui.components.DialogButton(
+                    text = stringResource(Res.string.timer_cancel),
+                    style = pl.quicktask.app.ui.components.DialogButtonStyle.TEXT,
+                    onClick = { itemToConvertToProject = null },
+                ),
+                pl.quicktask.app.ui.components.DialogButton(
+                    text = stringResource(Res.string.action_add_project),
+                    style = pl.quicktask.app.ui.components.DialogButtonStyle.PRIMARY,
+                    onClick = {
+                        viewModel.convertToProject(item.itemId, module.items.projects)
+                        itemToConvertToProject = null
+                    },
+                ),
+            ),
+            onDismissRequest = { itemToConvertToProject = null },
         )
     }
 }

@@ -201,7 +201,6 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentThemeMode by ThemeManager.themeMode.collectAsStateWithLifecycle()
     val allLogs by AppLoggerManager.logs.collectAsStateWithLifecycle()
-    val appName = stringResource(Res.string.app_name)
     val settingsTitle = stringResource(Res.string.settings)
     val buildInfo = remember { getBuildInfo() }
 
@@ -217,7 +216,7 @@ fun SettingsScreen(
         topBar = {
             if (selectedCategory == null) {
                 AppTopBar(
-                    title = "$appName - $settingsTitle",
+                    title = settingsTitle,
                     onOpenDrawer = onOpenDrawer,
                 )
             } else {

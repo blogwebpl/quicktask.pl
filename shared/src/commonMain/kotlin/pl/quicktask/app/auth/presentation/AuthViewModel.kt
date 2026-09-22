@@ -20,6 +20,7 @@ import todo.shared.generated.resources.error_user_keys_locked
 
 data class AuthUiState(
     val isLoading: Boolean = false,
+    val isInitializing: Boolean = false,
     val errorMessageRes: StringResource? = null,
     val errorMessage: String? = null,
     val isLoggedIn: Boolean = false,
@@ -33,6 +34,7 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(
         AuthUiState(
             isLoading = repository.isLoggedIn,
+            isInitializing = repository.isLoggedIn,
             isLoggedIn = false,
         ),
     )
@@ -45,13 +47,14 @@ class AuthViewModel(
                 val restored = repository.tryRestoreCachedKeys()
                 if (restored) {
                     AppLoggerManager.logStateChange("AuthViewModel", "Przywrócono klucze, uzytkownik zalogowany")
-                    _uiState.update { AuthUiState(isLoggedIn = true) }
+                    _uiState.update { AuthUiState(isLoggedIn = true, isInitializing = false) }
                 } else {
                     if (!browserSessions) repository.logout()
                     AppLoggerManager.logStateChange("AuthViewModel", "Klucze zablokowane, wymagane ponowne logowanie")
                     _uiState.update {
                         AuthUiState(
                             isLoggedIn = false,
+                            isInitializing = false,
                             errorMessageRes = Res.string.error_user_keys_locked,
                         )
                     }

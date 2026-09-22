@@ -1,5 +1,7 @@
 package pl.quicktask.app.inbox.presentation
 
+import pl.quicktask.app.scheduled.model.RecurrenceRule
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -143,6 +145,25 @@ class InboxViewModel(
         }
     }
 
+    fun convertToProject(
+        itemId: String,
+        projectsOperations: pl.quicktask.app.projects.data.ProjectsOperations,
+    ) {
+        AppLoggerManager.logFunction("InboxViewModel", "convertToProject", "itemId=$itemId")
+        val targetItem = _uiState.value.items.find { it.itemId == itemId }
+        if (targetItem?.isPendingConfirmation == true) return
+        val operation = store.beginOperation(itemId, null) ?: return
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            runPendingItemMutation(
+                store, operation,
+                mutate = { projectsOperations.convertFromInbox(itemId) },
+                refresh = { repository.getItems() },
+                onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
+                onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
+            )
+        }
+    }
+
     fun convertToNextAction(
         itemId: String,
         projectId: String?,
@@ -171,6 +192,56 @@ class InboxViewModel(
                         newContexts = newContexts,
                         tagIds = tagIds,
                         newTagNames = newTagNames,
+                    )
+                },
+                refresh = { repository.getItems() },
+                onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
+                onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
+            )
+        }
+    }
+
+    fun convertToScheduled(
+        recurrence: RecurrenceRule? = null,
+        item: InboxItem,
+        title: String,
+        note: String,
+        scheduledAt: String,
+        deferUntil: String?,
+        dueAt: String?,
+        projectId: String?,
+        contextIds: List<String>,
+        newContextNames: List<String>,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        newFiles: List<InputFile>,
+        removedAttachmentIds: List<String>,
+        scheduledOperations: pl.quicktask.app.scheduled.data.ScheduledOperations,
+    ) {
+        val itemId = item.itemId
+        AppLoggerManager.logFunction("InboxViewModel", "convertToScheduled", "itemId=$itemId")
+        val targetItem = _uiState.value.items.find { it.itemId == itemId }
+        if (targetItem?.isPendingConfirmation == true) return
+        val operation = store.beginOperation(itemId, null) ?: return
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            runPendingItemMutation(
+                store, operation,
+                mutate = {
+                    scheduledOperations.convertFromInbox(
+                        recurrence = recurrence,
+                        item = item,
+                        title = title,
+                        note = note,
+                        scheduledAt = scheduledAt,
+                        deferUntil = deferUntil,
+                        dueAt = dueAt,
+                        projectId = projectId,
+                        contextIds = contextIds,
+                        newContextNames = newContextNames,
+                        tagIds = tagIds,
+                        newTagNames = newTagNames,
+                        newFiles = newFiles,
+                        removedAttachmentIds = removedAttachmentIds,
                     )
                 },
                 refresh = { repository.getItems() },

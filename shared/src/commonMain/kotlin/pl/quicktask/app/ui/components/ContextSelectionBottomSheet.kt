@@ -499,6 +499,12 @@ fun ContextFieldSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
                     Text(
                         text = stringResource(Res.string.no_contexts),
                         style = MaterialTheme.typography.bodyMedium,

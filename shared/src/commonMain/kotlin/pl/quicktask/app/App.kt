@@ -12,9 +12,16 @@ import pl.quicktask.app.di.sharedAppModule
 import pl.quicktask.app.main.presentation.MainLayout
 import pl.quicktask.app.ui.theme.AppTheme
 import pl.quicktask.app.ui.theme.ThemeManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import pl.quicktask.app.auth.session.SecretStorageStatus
 import pl.quicktask.app.auth.session.SecretStorageAvailability
 
@@ -63,6 +70,15 @@ fun App(
                 module = module,
                 onLogout = { authViewModel.logout() },
             )
+        } else if (uiState.isInitializing) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
         } else {
             LoginScreen(viewModel = authViewModel)
         }

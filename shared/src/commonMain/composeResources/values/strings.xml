@@ -67,7 +67,7 @@
     <string name="task_title_prompt">What do you want to do?</string>
     <string name="task_note_label">Note</string>
     <string name="task_optional_label">optional</string>
-    <string name="task_note_placeholder">Note (optional)</string>
+    <string name="task_note_placeholder">Note</string>
     <string name="task_attachments_label">Attachments:</string>
     <string name="task_add_attachment">Add attachment</string>
     <string name="task_save_button">Save</string>
@@ -185,11 +185,12 @@
     <string name="date_next_week">In a week</string>
     <string name="date_calendar">Calendar</string>
     <string name="date_overdue_format">Overdue (%1$s)</string>
-    <string name="scheduled_date_format">Scheduled: %1$s</string>
+    <string name="scheduled_date_format">Planned task date: %1$s</string>
     <string name="waiting_for_format">Waiting: %1$s</string>
-    <string name="due_date_optional">Due date (optional)</string>
-    <string name="date_placeholder">YYYY-MM-DD</string>
-    <string name="clear_due_date">Clear due date</string>
+    <string name="due_date_optional">Completion deadline</string>
+    <string name="scheduled_at_label">Planned task date</string>
+    <string name="defer_until_label">Postpone task until</string>
+    <string name="clear_due_date">Clear completion deadline</string>
     <string name="open_calendar">Open calendar</string>
     <string name="action_select">Select</string>
 
@@ -231,4 +232,48 @@
     <string name="logs_filter_func">Functions</string>
     <string name="logs_search_hint">Search logs…</string>
     <string name="logs_count">Log count: %1$d</string>
+    <string name="scheduled_section_details">Details</string>
+    <string name="scheduled_section_dates">Dates</string>
+    <string name="scheduled_section_organization">Organization</string>
+    <string name="recurrence_title">Repeat task</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">Weekly</string>
+    <string name="recurrence_monthly">Monthly</string>
+    <string name="recurrence_yearly">Yearly</string>
+    <string name="recurrence_interval">Repeat every</string>
+    <string name="recurrence_interval_hint">1–366 days, weeks, months or years, depending on the selection above</string>
+    <string name="recurrence_calendar">From planned date</string>
+    <string name="recurrence_completion">After completion</string>
+    <string name="recurrence_calendar_hint">Keep the calendar schedule. Missed dates are skipped.</string>
+    <string name="recurrence_completion_hint">Count the interval from when you complete the task.</string>
+    <string name="recurrence_until">Repeat end date</string>
+    <string name="recurrence_invalid">Enter an interval from 1 to 366 and an end date on or after the planned date.</string>
+    <string name="recurrence_days_summary">Repeat every %1$d day(s)</string>
+    <string name="recurrence_weeks_summary">Repeat every %1$d week(s)</string>
+    <string name="recurrence_months_summary">Repeat every %1$d month(s)</string>
+    <string name="recurrence_years_summary">Repeat every %1$d year(s)</string>
+    <string name="recurrence_end_error">Choose an end date on or after the planned task date.</string>
+    <string name="recurrence_frequency">Frequency</string>
+    <string name="recurrence_interval_error">Enter a number from 1 to 366.</string>
+    <string name="recurrence_mode_label">When does the interval start?</string>
+    <string name="recurrence_no_end">No end date — repeats until you turn it off.</string>
+    <string name="recurrence_unit_days">days</string>
+    <string name="recurrence_unit_months">months</string>
+    <string name="recurrence_unit_weeks">weeks</string>
+    <string name="recurrence_unit_years">years</string>
+
+    <!-- Projects -->
+    <string name="projects_empty">No projects</string>
+    <string name="unassigned_tasks">Unassigned tasks</string>
+    <string name="action_add_project">New project</string>
+    <string name="action_add_task_to_project">Add task</string>
+    <string name="dialog_convert_to_project_title">Convert to project</string>
+    <string name="dialog_convert_to_project_question">Are you sure you want to convert item \"%1$s\" into a project?</string>
+    <string name="waiting_for_label">Waiting for</string>
+    <string name="follow_up_at_label">Follow-up date</string>
+    <string name="gtd_state_next">Next Action</string>
+    <string name="gtd_state_waiting">Waiting</string>
+    <string name="gtd_state_scheduled">Scheduled</string>
+    <string name="project_task_type_label">Task type</string>
+    <string name="project_tasks_count">%1$d tasks</string>
 </resources>

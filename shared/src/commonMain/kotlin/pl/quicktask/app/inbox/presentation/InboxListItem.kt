@@ -3,7 +3,9 @@ package pl.quicktask.app.inbox.presentation
 import pl.quicktask.app.items.model.InboxItem
 import pl.quicktask.app.items.model.ProcessDestination
 
-
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,17 +29,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import todo.shared.generated.resources.Res
+import todo.shared.generated.resources.action_projects
 import todo.shared.generated.resources.ic_book
 import todo.shared.generated.resources.ic_check_circle
 import todo.shared.generated.resources.ic_date_range
 import todo.shared.generated.resources.ic_delete
-import todo.shared.generated.resources.action_projects
 import todo.shared.generated.resources.ic_hourglass_empty
 import todo.shared.generated.resources.ic_list
 import todo.shared.generated.resources.ic_play_arrow
@@ -62,10 +64,16 @@ internal fun InboxListItem(
     var showMenu by remember { mutableStateOf(false) }
     val isPending = item.isPendingConfirmation
 
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (isPending) 0.7f else 1.0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "cardAlpha",
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer(alpha = if (isPending) 0.65f else 1.0f),
+            .graphicsLayer(alpha = cardAlpha),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
@@ -74,7 +82,7 @@ internal fun InboxListItem(
         ) {
             Column(
                 modifier = Modifier
-                    .weight(4f)
+                    .weight(1f)
                     .clickable(enabled = !isPending, onClick = onClick)
                     .padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 16.dp),
             ) {
@@ -82,29 +90,34 @@ internal fun InboxListItem(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
                 )
-
             }
 
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .clickable(enabled = !isPending) { showMenu = true }
-                    .padding(top = 16.dp, bottom = 16.dp, end = 4.dp),
+                    .padding(end = 8.dp)
+                    .size(48.dp)
+                    .clickable(enabled = !isPending) { showMenu = true },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isPending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_process),
-                        contentDescription = stringResource(Res.string.process_item),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp),
-                    )
+                Crossfade(
+                    targetState = isPending,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "processActionState",
+                ) { pending ->
+                    if (pending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.5.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_process),
+                            contentDescription = stringResource(Res.string.process_item),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
 
                 DropdownMenu(

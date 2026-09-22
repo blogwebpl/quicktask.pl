@@ -10,17 +10,66 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.isSuccess
 import io.ktor.util.date.getTimeMillis
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import pl.quicktask.app.auth.crypto.DPoPManager
-import pl.quicktask.app.auth.data.AuthRepository
 import pl.quicktask.app.auth.data.SessionRefresher
-import pl.quicktask.app.auth.model.ApiErrorDto
 import pl.quicktask.app.auth.model.ApiException
 import pl.quicktask.app.auth.session.SessionManager
 import pl.quicktask.app.common.AppLoggerManager
+import pl.quicktask.app.common.LogCategory
+import pl.quicktask.app.common.LogLevel
 import pl.quicktask.app.items.model.MissingSessionException
 import pl.quicktask.app.network.config.ApiConfig
+
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+private val defaultJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+    explicitNulls = false
+}
+
+internal data class ParsedApiError(
+    val code: String?,
+    val message: String,
+    val rawBody: String,
+)
+
+internal fun parseApiError(httpStatusCode: Int, responseText: String): ParsedApiError {
+    if (responseText.isBlank()) {
+        return ParsedApiError(code = null, message = "HTTP $httpStatusCode (brak treści odpowiedzi)", rawBody = "")
+    }
+    return try {
+        val jsonElement = defaultJson.parseToJsonElement(responseText)
+        if (jsonElement is JsonObject) {
+            val code = jsonElement["code"]?.jsonPrimitive?.contentOrNull
+            val errorStr = jsonElement["error"]?.jsonPrimitive?.contentOrNull
+
+            val msgElement = jsonElement["message"]
+            val msgStr = when (msgElement) {
+                is JsonPrimitive -> msgElement.contentOrNull
+                is JsonArray -> msgElement.mapNotNull {
+                    if (it is JsonPrimitive) it.contentOrNull else it.toString()
+                }.joinToString("; ")
+                else -> msgElement?.toString()
+            } ?: errorStr
+
+            ParsedApiError(
+                code = code ?: errorStr,
+                message = msgStr ?: responseText,
+                rawBody = responseText,
+            )
+        } else {
+            ParsedApiError(code = null, message = responseText, rawBody = responseText)
+        }
+    } catch (_: Exception) {
+        ParsedApiError(code = null, message = responseText, rawBody = responseText)
+    }
+}
 
 class AuthenticatedApiClient(
     private val httpClient: HttpClient,
@@ -28,7 +77,7 @@ class AuthenticatedApiClient(
     private val sessionManager: SessionManager,
     private val refreshSession: suspend () -> Result<Unit>,
     private val baseUrl: String = ApiConfig.BASE_URL,
-    private val json: Json = Json { ignoreUnknownKeys = true },
+    private val json: Json = defaultJson,
 ) {
     constructor(
         httpClient: HttpClient, dPoPManager: DPoPManager, sessionManager: SessionManager,
@@ -70,18 +119,20 @@ class AuthenticatedApiClient(
         AppLoggerManager.logApiResponse("AuthenticatedApiClient", method.value, path, response.status.value, "${duration}ms")
         if (!response.status.isSuccess()) {
             val text = response.bodyAsText()
-            val error = try {
-                json.decodeFromString<ApiErrorDto>(text)
-            } catch (_: SerializationException) {
-                null
-            } catch (_: IllegalArgumentException) {
-                null
-            }
+            val parsedError = parseApiError(response.status.value, text)
+
+            val logMsg = "Błąd API ${method.value} $path -> HTTP ${response.status.value}" +
+                    (if (!parsedError.code.isNullOrBlank()) " [code=${parsedError.code}]" else "") +
+                    ": ${parsedError.message}"
+
             AppLoggerManager.log(
+                level = LogLevel.ERROR,
+                category = LogCategory.API_RESPONSE,
                 tag = "AuthenticatedApiClient",
-                message = "Błąd API $path: ${response.status.value} - ${error?.message ?: text}"
+                message = logMsg,
+                details = "raw_body=$text",
             )
-            throw ApiException(error?.code, response.status.value, error?.message ?: text)
+            throw ApiException(parsedError.code, response.status.value, parsedError.message)
         }
         return response
     }

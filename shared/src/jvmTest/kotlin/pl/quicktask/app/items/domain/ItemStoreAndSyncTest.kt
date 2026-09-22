@@ -86,12 +86,49 @@ class ItemStoreAndSyncTest {
     }
 
     @Test
+    fun scheduledSyncAddsTaskToScheduledCacheInsteadOfRemovingIt(): Unit = runBlocking {
+        val fixture = encryptedFixture()
+        val client = mockClient(MockEngine { respond("{}", HttpStatusCode.OK, jsonHeaders) })
+        try {
+            val module = fixture.module(client)
+            val scheduledAt = "2026-09-20T12:00:00.000Z"
+            val syncItem = fixture.sync.copy(
+                isReference = false,
+                isScheduled = true,
+                recurrence = pl.quicktask.app.scheduled.model.RecurrenceRule(pl.quicktask.app.scheduled.model.RecurrenceFrequency.MONTHLY, 2, pl.quicktask.app.scheduled.model.RecurrenceMode.SCHEDULED),
+                scheduledAt = scheduledAt,
+                deferUntil = "2026-09-19T12:00:00.000Z",
+                dueAt = "2026-09-21T12:00:00.000Z",
+            )
+
+            module.sync.applySyncState(
+                ItemSyncStateResponseDto("scheduled", item = syncItem),
+                syncItem.itemId,
+            )
+
+            val scheduled = module.store.scheduledTasksFlow.value.single()
+            assertEquals(syncItem.itemId, scheduled.itemId)
+            assertEquals("Tytuł użytkownika", scheduled.title)
+            assertEquals(scheduledAt, scheduled.scheduledAt)
+            assertEquals(syncItem.deferUntil, scheduled.deferUntil)
+            assertEquals(syncItem.dueAt, scheduled.dueAt)
+            assertEquals(syncItem.recurrence, scheduled.recurrence)
+            assertEquals(emptyList(), module.store.itemsFlow.value)
+            assertEquals(emptyList(), module.store.nextActionsFlow.value)
+            assertEquals(emptyList(), module.store.trashItemsFlow.value)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun failedSyncStateFallsBackToRefreshingBothLists(): Unit = runBlocking {
         val fixture = encryptedFixture()
         val responses = ArrayDeque(listOf(
             "failure" to HttpStatusCode.InternalServerError,
             testJson.encodeToString(listOf(fixture.inbox)) to HttpStatusCode.OK,
             testJson.encodeToString(listOf(fixture.trash)) to HttpStatusCode.OK,
+            "[]" to HttpStatusCode.OK,
         ))
         val paths = mutableListOf<String>()
         val client = mockClient(MockEngine { request ->
@@ -102,7 +139,7 @@ class ItemStoreAndSyncTest {
         try {
             val module = fixture.module(client)
             module.sync.handleSyncStateForItem("item-1").getOrThrow()
-            assertEquals(listOf("/inbox/item-1/sync-state", "/inbox", "/inbox/trash"), paths)
+            assertEquals(listOf("/inbox/item-1/sync-state", "/inbox", "/inbox/trash", "/inbox/scheduled"), paths)
             assertEquals(1, module.store.itemsFlow.value.size)
             assertEquals(1, module.store.trashItemsFlow.value.size)
         } finally { client.close() }

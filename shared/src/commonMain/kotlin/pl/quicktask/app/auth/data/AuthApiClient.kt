@@ -11,12 +11,14 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
-import kotlinx.serialization.json.Json
 import pl.quicktask.app.auth.crypto.DPoPManager
 import pl.quicktask.app.auth.crypto.UserKeyMaterialDto
 import pl.quicktask.app.auth.model.*
 import pl.quicktask.app.auth.session.browserSessions
 import pl.quicktask.app.common.AppLoggerManager
+import pl.quicktask.app.common.LogCategory
+import pl.quicktask.app.common.LogLevel
+import pl.quicktask.app.network.client.parseApiError
 
 internal class AuthApiClient(
     private val httpClient: HttpClient,
@@ -103,15 +105,26 @@ internal class AuthApiClient(
     }
 }
 
-private val authJson = Json { ignoreUnknownKeys = true }
-
 internal suspend fun HttpResponse.ensureSuccessOrThrow() {
     if (status.isSuccess()) return
     val errorText = bodyAsText()
-    val parsedError = runCatching { authJson.decodeFromString<ApiErrorDto>(errorText) }.getOrNull()
+    val parsedError = parseApiError(status.value, errorText)
+
+    val logMsg = "Błąd Auth API -> HTTP ${status.value}" +
+            (if (!parsedError.code.isNullOrBlank()) " [code=${parsedError.code}]" else "") +
+            ": ${parsedError.message}"
+
+    AppLoggerManager.log(
+        level = LogLevel.ERROR,
+        category = LogCategory.API_RESPONSE,
+        tag = "AuthApiClient",
+        message = logMsg,
+        details = "raw_body=$errorText",
+    )
+
     throw ApiException(
-        code = parsedError?.code,
-        statusCode = parsedError?.statusCode ?: status.value,
-        message = parsedError?.message ?: errorText,
+        code = parsedError.code,
+        statusCode = status.value,
+        message = parsedError.message,
     )
 }

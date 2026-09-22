@@ -67,7 +67,7 @@
     <string name="task_title_prompt">Co chcesz zrobić?</string>
     <string name="task_note_label">Notatka</string>
     <string name="task_optional_label">opcjonalnie</string>
-    <string name="task_note_placeholder">Notatka (opcjonalnie)</string>
+    <string name="task_note_placeholder">Notatka</string>
     <string name="task_attachments_label">Załączniki:</string>
     <string name="task_add_attachment">Dodaj załącznik</string>
     <string name="task_save_button">Zapisz</string>
@@ -185,11 +185,12 @@
     <string name="date_next_week">Za tydzień</string>
     <string name="date_calendar">Kalendarz</string>
     <string name="date_overdue_format">Przeterminowane (%1$s)</string>
-    <string name="scheduled_date_format">Zaplanowane: %1$s</string>
+    <string name="scheduled_date_format">Planowane wykonanie: %1$s</string>
     <string name="waiting_for_format">Oczekuje: %1$s</string>
-    <string name="due_date_optional">Termin ostateczny (opcjonalnie)</string>
-    <string name="date_placeholder">RRRR-MM-DD</string>
-    <string name="clear_due_date">Wyczyść termin ostateczny</string>
+    <string name="due_date_optional">Ostateczny termin wykonania</string>
+    <string name="scheduled_at_label">Planowana data wykonania</string>
+    <string name="defer_until_label">Odłóż zadanie do</string>
+    <string name="clear_due_date">Usuń ostateczny termin wykonania</string>
     <string name="open_calendar">Otwórz kalendarz</string>
     <string name="action_select">Wybierz</string>
 
@@ -231,4 +232,48 @@
     <string name="logs_filter_func">Funkcje</string>
     <string name="logs_search_hint">Szukaj w logach…</string>
     <string name="logs_count">Liczba logów: %1$d</string>
+    <string name="scheduled_section_details">Szczegóły</string>
+    <string name="scheduled_section_dates">Terminy</string>
+    <string name="scheduled_section_organization">Organizacja</string>
+    <string name="recurrence_title">Powtarzaj zadanie</string>
+    <string name="recurrence_daily">Codziennie</string>
+    <string name="recurrence_weekly">Co tydzień</string>
+    <string name="recurrence_monthly">Co miesiąc</string>
+    <string name="recurrence_yearly">Co rok</string>
+    <string name="recurrence_interval">Powtarzaj co</string>
+    <string name="recurrence_interval_hint">1–366 dni, tygodni, miesięcy lub lat, zgodnie z wyborem powyżej</string>
+    <string name="recurrence_calendar">Od planowanej daty</string>
+    <string name="recurrence_completion">Od wykonania</string>
+    <string name="recurrence_calendar_hint">Zachowaj terminy w kalendarzu. Zaległe wystąpienia zostaną pominięte.</string>
+    <string name="recurrence_completion_hint">Licz odstęp od dnia wykonania zadania.</string>
+    <string name="recurrence_until">Data zakończenia powtarzania</string>
+    <string name="recurrence_invalid">Wpisz odstęp od 1 do 366. Data zakończenia powtarzania nie może być wcześniejsza niż planowana data wykonania.</string>
+    <string name="recurrence_days_summary">Powtarzanie co %1$d dni</string>
+    <string name="recurrence_weeks_summary">Powtarzanie co %1$d tygodni</string>
+    <string name="recurrence_months_summary">Powtarzanie co %1$d miesięcy</string>
+    <string name="recurrence_years_summary">Powtarzanie co %1$d lat</string>
+    <string name="recurrence_end_error">Data zakończenia powtarzania nie może być wcześniejsza niż planowana data wykonania.</string>
+    <string name="recurrence_frequency">Częstotliwość</string>
+    <string name="recurrence_interval_error">Wpisz liczbę od 1 do 366.</string>
+    <string name="recurrence_mode_label">Od kiedy liczyć odstęp?</string>
+    <string name="recurrence_no_end">Bez daty końcowej — zadanie będzie powtarzane do wyłączenia.</string>
+    <string name="recurrence_unit_days">dni</string>
+    <string name="recurrence_unit_months">miesięcy</string>
+    <string name="recurrence_unit_weeks">tygodni</string>
+    <string name="recurrence_unit_years">lat</string>
+
+    <!-- Projects -->
+    <string name="projects_empty">Brak projektów</string>
+    <string name="unassigned_tasks">Zadania nieprzypisane</string>
+    <string name="action_add_project">Nowy projekt</string>
+    <string name="action_add_task_to_project">Dodaj zadanie</string>
+    <string name="dialog_convert_to_project_title">Zamiana w projekt</string>
+    <string name="dialog_convert_to_project_question">Czy na pewno chcesz zamienić wpis „%1$s” w projekt?</string>
+    <string name="waiting_for_label">Czekam na</string>
+    <string name="follow_up_at_label">Data ponownego sprawdzenia</string>
+    <string name="gtd_state_next">Najbliższe działanie</string>
+    <string name="gtd_state_waiting">Oczekujące</string>
+    <string name="gtd_state_scheduled">Zaplanowane</string>
+    <string name="project_task_type_label">Typ zadania</string>
+    <string name="project_tasks_count">%1$d zadań</string>
 </resources>

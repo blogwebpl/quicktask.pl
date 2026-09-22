@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import pl.quicktask.app.items.model.InboxItem
 import pl.quicktask.app.nextactions.model.NextAction
+import pl.quicktask.app.scheduled.model.ScheduledTask
 import pl.quicktask.app.trash.model.TrashItem
 
 /** Server snapshots and local overlays are updated together with a single atomic state. */
@@ -23,6 +24,8 @@ class ItemStore {
     private data class State(
         val inbox: List<InboxItem> = emptyList(),
         val nextActions: List<NextAction> = emptyList(),
+        val scheduledTasks: List<ScheduledTask> = emptyList(),
+        val projects: List<pl.quicktask.app.projects.model.ProjectWithTasks> = emptyList(),
         val trash: List<TrashItem> = emptyList(),
         val pending: Map<String, Change> = emptyMap(),
         val trashPending: Map<String, TrashOperation> = emptyMap(),
@@ -31,6 +34,8 @@ class ItemStore {
         val generation: Long = 0,
         val inboxValid: Boolean = false,
         val nextActionsValid: Boolean = false,
+        val scheduledValid: Boolean = false,
+        val projectsValid: Boolean = false,
         val trashValid: Boolean = false,
     ) {
         fun visibleTrash(): List<TrashItem> = if (emptyTrash != null) emptyList()
@@ -57,6 +62,8 @@ class ItemStore {
     private val state = MutableStateFlow(State())
     val itemsFlow: StateFlow<List<InboxItem>> = ProjectedStateFlow(state) { it.visibleInbox() }
     val nextActionsFlow: StateFlow<List<NextAction>> = ProjectedStateFlow(state) { it.nextActions }
+    val scheduledTasksFlow: StateFlow<List<ScheduledTask>> = ProjectedStateFlow(state) { it.scheduledTasks }
+    val projectsFlow: StateFlow<List<pl.quicktask.app.projects.model.ProjectWithTasks>> = ProjectedStateFlow(state) { it.projects }
     val trashItemsFlow: StateFlow<List<TrashItem>> = ProjectedStateFlow(state) { it.visibleTrash() }
     val trashOperationsFlow: StateFlow<Map<String, TrashOperationKind>> = ProjectedStateFlow(state) {
         it.trashPending.mapValues { entry -> requireNotNull(entry.value.kind) }
@@ -92,11 +99,13 @@ class ItemStore {
 
     val isCacheValid get() = state.value.inboxValid
     val isNextActionsCacheValid get() = state.value.nextActionsValid
+    val isScheduledCacheValid get() = state.value.scheduledValid
+    val isProjectsCacheValid get() = state.value.projectsValid
     val isTrashCacheValid get() = state.value.trashValid
     internal val generation get() = state.value.generation
 
     fun invalidateCache() = state.update {
-        it.copy(generation = it.generation + 1, inboxValid = false, nextActionsValid = false, trashValid = false)
+        it.copy(generation = it.generation + 1, inboxValid = false, nextActionsValid = false, scheduledValid = false, projectsValid = false, trashValid = false)
     }
 
     internal fun cacheInbox(
@@ -118,6 +127,20 @@ class ItemStore {
             val before = state.value
             if (before.generation != expectedGeneration) return false
             if (state.compareAndSet(before, before.copy(nextActions = items, nextActionsValid = true))) return true
+        }
+    }
+    internal fun cacheScheduledTasks(items: List<ScheduledTask>, expectedGeneration: Long = generation): Boolean {
+        while (true) {
+            val before = state.value
+            if (before.generation != expectedGeneration) return false
+            if (state.compareAndSet(before, before.copy(scheduledTasks = items, scheduledValid = true))) return true
+        }
+    }
+    internal fun cacheProjects(items: List<pl.quicktask.app.projects.model.ProjectWithTasks>, expectedGeneration: Long = generation): Boolean {
+        while (true) {
+            val before = state.value
+            if (before.generation != expectedGeneration) return false
+            if (state.compareAndSet(before, before.copy(projects = items, projectsValid = true))) return true
         }
     }
     internal fun cacheTrash(items: List<TrashItem>, expectedGeneration: Long = generation): Boolean {
@@ -167,27 +190,63 @@ class ItemStore {
         it.copy(trash = it.trash.filterNot { item -> item.itemId == itemId })
     }
     internal fun applyInbox(item: InboxItem, targetItemId: String) = state.update {
+        val index = it.inbox.indexOfFirst { old -> old.itemId == targetItemId }
+        val updatedInbox = if (index != -1) {
+            it.inbox.toMutableList().apply { set(index, item) }
+        } else {
+            listOf(item) + it.inbox
+        }
         it.copy(
             generation = it.generation + 1,
-            inbox = listOf(item) + it.inbox.filterNot { old -> old.itemId == targetItemId },
+            inbox = updatedInbox,
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
+            scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyNextAction(item: NextAction, targetItemId: String) = state.update {
+        val index = it.nextActions.indexOfFirst { old -> old.itemId == targetItemId }
+        val updatedNextActions = if (index != -1) {
+            it.nextActions.toMutableList().apply { set(index, item) }
+        } else {
+            listOf(item) + it.nextActions
+        }
         it.copy(
             generation = it.generation + 1,
-            nextActions = listOf(item) + it.nextActions.filterNot { old -> old.itemId == targetItemId },
+            nextActions = updatedNextActions,
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
+            scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
+            trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+        )
+    }
+    internal fun applyScheduledTask(item: ScheduledTask, targetItemId: String) = state.update {
+        val index = it.scheduledTasks.indexOfFirst { old -> old.itemId == targetItemId }
+        val updatedScheduledTasks = if (index != -1) {
+            it.scheduledTasks.toMutableList().apply { set(index, item) }
+        } else {
+            listOf(item) + it.scheduledTasks
+        }
+        it.copy(
+            generation = it.generation + 1,
+            scheduledTasks = updatedScheduledTasks,
+            inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
+            nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyTrash(item: TrashItem, targetItemId: String) = state.update {
+        val index = it.trash.indexOfFirst { old -> old.itemId == targetItemId }
+        val updatedTrash = if (index != -1) {
+            it.trash.toMutableList().apply { set(index, item) }
+        } else {
+            listOf(item) + it.trash
+        }
         it.copy(
             generation = it.generation + 1,
-            trash = listOf(item) + it.trash.filterNot { old -> old.itemId == targetItemId },
+            trash = updatedTrash,
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
+            scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyRemoval(itemId: String) = state.update {
@@ -195,6 +254,7 @@ class ItemStore {
             generation = it.generation + 1,
             inbox = it.inbox.filterNot { item -> item.itemId == itemId },
             nextActions = it.nextActions.filterNot { item -> item.itemId == itemId },
+            scheduledTasks = it.scheduledTasks.filterNot { item -> item.itemId == itemId },
             trash = it.trash.filterNot { item -> item.itemId == itemId },
         )
     }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -26,7 +25,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -47,6 +45,7 @@ import pl.quicktask.app.nextactions.presentation.dialogs.AddEditNextActionDialog
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.ic_list
 import todo.shared.generated.resources.ic_play_arrow
+import pl.quicktask.app.ui.components.AppTopBar
 import todo.shared.generated.resources.screen_next_actions
 
 import todo.shared.generated.resources.filter_all
@@ -77,16 +76,9 @@ fun NextActionsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.screen_next_actions)) },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = null,
-                        )
-                    }
-                },
+            AppTopBar(
+                title = stringResource(Res.string.screen_next_actions),
+                onOpenDrawer = onOpenDrawer,
             )
         },
         floatingActionButton = {
