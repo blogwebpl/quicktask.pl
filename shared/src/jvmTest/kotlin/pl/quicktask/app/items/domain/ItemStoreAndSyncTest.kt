@@ -126,8 +126,10 @@ class ItemStoreAndSyncTest {
         val fixture = encryptedFixture()
         val responses = ArrayDeque(listOf(
             "failure" to HttpStatusCode.InternalServerError,
+            "{}" to HttpStatusCode.OK,
             testJson.encodeToString(listOf(fixture.inbox)) to HttpStatusCode.OK,
             testJson.encodeToString(listOf(fixture.trash)) to HttpStatusCode.OK,
+            "[]" to HttpStatusCode.OK,
             "[]" to HttpStatusCode.OK,
         ))
         val paths = mutableListOf<String>()
@@ -139,7 +141,7 @@ class ItemStoreAndSyncTest {
         try {
             val module = fixture.module(client)
             module.sync.handleSyncStateForItem("item-1").getOrThrow()
-            assertEquals(listOf("/inbox/item-1/sync-state", "/inbox", "/inbox/trash", "/inbox/scheduled"), paths)
+            assertEquals(listOf("/inbox/item-1/sync-state", "/inbox/projects", "/inbox", "/inbox/trash", "/inbox/next-actions", "/inbox/scheduled"), paths)
             assertEquals(1, module.store.itemsFlow.value.size)
             assertEquals(1, module.store.trashItemsFlow.value.size)
         } finally { client.close() }

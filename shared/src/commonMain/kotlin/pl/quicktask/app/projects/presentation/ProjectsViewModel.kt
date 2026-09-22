@@ -35,9 +35,9 @@ class ProjectsViewModel(
 
     init {
         viewModelScope.launch {
-            store.projectsFlow.collect { projects ->
-                AppLoggerManager.logStateChange("ProjectsViewModel", "Aktualizacja listy projektów", "count=${projects.size}")
-                _uiState.update { it.copy(projects = projects) }
+            store.projectsOverviewFlow.collect { overview ->
+                AppLoggerManager.logStateChange("ProjectsViewModel", "Aktualizacja listy projektów", "count=${overview.projects.size}")
+                _uiState.update { it.copy(projects = overview.projects, unassignedTasks = overview.unassignedTasks) }
             }
         }
         loadProjects()
@@ -51,14 +51,6 @@ class ProjectsViewModel(
         viewModelScope.launch {
             try {
                 projectsRepository.getProjects(forceFetch)
-                    .onSuccess { result ->
-                        _uiState.update {
-                            it.copy(
-                                projects = result.projects,
-                                unassignedTasks = result.unassignedTasks,
-                            )
-                        }
-                    }
                     .onFailure { error ->
                         showError(error, Res.string.error_fetch_items)
                     }

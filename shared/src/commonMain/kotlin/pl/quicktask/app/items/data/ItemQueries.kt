@@ -15,6 +15,8 @@ import pl.quicktask.app.items.store.ItemStore
 import pl.quicktask.app.network.client.AuthenticatedApiClient
 import pl.quicktask.app.trash.model.TrashItem
 import pl.quicktask.app.trash.model.TrashItemDto
+import pl.quicktask.app.projects.model.ProjectsResponseDto
+import pl.quicktask.app.projects.model.ProjectsResult
 
 class ItemQueries(
     private val api: AuthenticatedApiClient,
@@ -23,6 +25,23 @@ class ItemQueries(
 ) {
     private val inboxFlight = SingleFlight<List<InboxItem>>()
     private val trashFlight = SingleFlight<List<TrashItem>>()
+    private val projectsFlight = SingleFlight<ProjectsResult>()
+
+    suspend fun getProjects(forceFetch: Boolean = false): Result<ProjectsResult> {
+        if (!forceFetch && store.isProjectsCacheValid) return Result.success(store.projectsOverviewFlow.value)
+        return projectsFlight.run(store.generation) {
+            itemResult {
+                while (true) {
+                    val generation = store.generation
+                    val response = api.request(HttpMethod.Get, "inbox/projects").body<ProjectsResponseDto>()
+                    val projects = response.projects.map { mapper.projectWithTasks(it) }
+                    val unassigned = response.unassignedTasks.map { mapper.projectTask(it) }
+                    if (store.cacheProjects(projects, generation, unassigned)) break
+                }
+                store.projectsOverviewFlow.value
+            }
+        }
+    }
 
     suspend fun getItems(
         forceFetch: Boolean = false,

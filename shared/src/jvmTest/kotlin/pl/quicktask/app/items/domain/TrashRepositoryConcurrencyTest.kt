@@ -22,6 +22,7 @@ class TrashRepositoryConcurrencyTest {
         val secondGate = CompletableDeferred<Unit>()
         val client = mockClient(MockEngine { request ->
             when {
+                request.url.encodedPath == "/inbox/projects" -> respond("{}", headers = jsonHeaders)
                 request.method == HttpMethod.Get -> respond(testJson.encodeToString(server.value), headers = jsonHeaders)
                 request.url.encodedPath.contains("second") -> {
                     enteredSecond.complete(Unit)

@@ -12,6 +12,8 @@ import pl.quicktask.app.items.model.InboxItem
 import pl.quicktask.app.nextactions.model.NextAction
 import pl.quicktask.app.scheduled.model.ScheduledTask
 import pl.quicktask.app.trash.model.TrashItem
+import pl.quicktask.app.projects.model.DecryptedProjectTask
+import pl.quicktask.app.projects.model.ProjectsResult
 
 /** Server snapshots and local overlays are updated together with a single atomic state. */
 enum class TrashOperationKind { Restore, PermanentDelete }
@@ -26,6 +28,7 @@ class ItemStore {
         val nextActions: List<NextAction> = emptyList(),
         val scheduledTasks: List<ScheduledTask> = emptyList(),
         val projects: List<pl.quicktask.app.projects.model.ProjectWithTasks> = emptyList(),
+        val unassignedTasks: List<DecryptedProjectTask> = emptyList(),
         val trash: List<TrashItem> = emptyList(),
         val pending: Map<String, Change> = emptyMap(),
         val trashPending: Map<String, TrashOperation> = emptyMap(),
@@ -64,6 +67,9 @@ class ItemStore {
     val nextActionsFlow: StateFlow<List<NextAction>> = ProjectedStateFlow(state) { it.nextActions }
     val scheduledTasksFlow: StateFlow<List<ScheduledTask>> = ProjectedStateFlow(state) { it.scheduledTasks }
     val projectsFlow: StateFlow<List<pl.quicktask.app.projects.model.ProjectWithTasks>> = ProjectedStateFlow(state) { it.projects }
+    val projectsOverviewFlow: StateFlow<ProjectsResult> = ProjectedStateFlow(state) {
+        ProjectsResult(it.projects, it.unassignedTasks)
+    }
     val trashItemsFlow: StateFlow<List<TrashItem>> = ProjectedStateFlow(state) { it.visibleTrash() }
     val trashOperationsFlow: StateFlow<Map<String, TrashOperationKind>> = ProjectedStateFlow(state) {
         it.trashPending.mapValues { entry -> requireNotNull(entry.value.kind) }
@@ -136,11 +142,11 @@ class ItemStore {
             if (state.compareAndSet(before, before.copy(scheduledTasks = items, scheduledValid = true))) return true
         }
     }
-    internal fun cacheProjects(items: List<pl.quicktask.app.projects.model.ProjectWithTasks>, expectedGeneration: Long = generation): Boolean {
+    internal fun cacheProjects(items: List<pl.quicktask.app.projects.model.ProjectWithTasks>, expectedGeneration: Long = generation, unassignedTasks: List<DecryptedProjectTask> = emptyList()): Boolean {
         while (true) {
             val before = state.value
             if (before.generation != expectedGeneration) return false
-            if (state.compareAndSet(before, before.copy(projects = items, projectsValid = true))) return true
+            if (state.compareAndSet(before, before.copy(projects = items, unassignedTasks = unassignedTasks, projectsValid = true))) return true
         }
     }
     internal fun cacheTrash(items: List<TrashItem>, expectedGeneration: Long = generation): Boolean {

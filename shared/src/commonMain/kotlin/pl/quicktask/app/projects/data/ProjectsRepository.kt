@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import pl.quicktask.app.auth.crypto.createItemKey
 import pl.quicktask.app.auth.model.ApiException
 import pl.quicktask.app.items.data.FileOperations
+import pl.quicktask.app.items.data.ItemQueries
 import pl.quicktask.app.items.domain.ItemCryptoMapper
 import pl.quicktask.app.items.domain.ItemViewRefresher
 import pl.quicktask.app.items.model.AttachmentLimitException
@@ -24,7 +25,6 @@ import pl.quicktask.app.items.model.itemResult
 import pl.quicktask.app.items.store.ItemStore
 import pl.quicktask.app.network.client.AuthenticatedApiClient
 import pl.quicktask.app.projects.model.ConvertInboxToWaitingRequestDto
-import pl.quicktask.app.projects.model.ProjectsResponseDto
 import pl.quicktask.app.projects.model.ProjectsResult
 
 interface ProjectsOperations {
@@ -64,22 +64,10 @@ class ProjectsRepository(
     private val store: ItemStore,
     private val refresher: ItemViewRefresher,
     private val filesRepository: FileOperations,
+    private val queries: ItemQueries,
 ) : ProjectsOperations {
 
-    override suspend fun getProjects(forceFetch: Boolean): Result<ProjectsResult> {
-        if (!forceFetch && store.isProjectsCacheValid) {
-            val cachedProjects = store.projectsFlow.value
-            return Result.success(ProjectsResult(projects = cachedProjects, unassignedTasks = emptyList()))
-        }
-        return itemResult {
-            val generation = store.generation
-            val response = api.request(HttpMethod.Get, "inbox/projects").body<ProjectsResponseDto>()
-            val projects = response.projects.map { mapper.projectWithTasks(it) }
-            val unassignedTasks = response.unassignedTasks.map { mapper.projectTask(it) }
-            store.cacheProjects(projects, generation)
-            ProjectsResult(projects = projects, unassignedTasks = unassignedTasks)
-        }
-    }
+    override suspend fun getProjects(forceFetch: Boolean): Result<ProjectsResult> = queries.getProjects(forceFetch)
 
     override suspend fun createProject(
         title: String,

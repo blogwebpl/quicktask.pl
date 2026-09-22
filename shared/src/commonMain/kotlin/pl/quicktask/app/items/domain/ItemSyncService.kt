@@ -29,7 +29,10 @@ class ItemSyncService(
 
     override suspend fun handleSyncStateForItem(itemId: String): Result<Unit> = itemResult {
         val result = fetchItemSyncState(itemId)
-        if (result.isSuccess) applySyncState(result.getOrThrow(), itemId) else refreshActiveViews()
+        if (result.isSuccess) {
+            applySyncState(result.getOrThrow(), itemId)
+            queries.getProjects(forceFetch = true).getOrThrow()
+        } else refreshActiveViews()
     }
 
     suspend fun applySyncState(dto: ItemSyncStateResponseDto, itemIdParam: String) {
@@ -55,6 +58,10 @@ class ItemSyncService(
     override suspend fun refreshActiveViews() {
         refreshViews()
         val generation = store.generation
+        val nextActions = api.request(HttpMethod.Get, "inbox/next-actions")
+            .body<List<pl.quicktask.app.nextactions.model.NextActionDto>>()
+            .map { mapper.nextAction(it) }
+        store.cacheNextActions(nextActions, generation)
         val tasks = api.request(HttpMethod.Get, "inbox/scheduled")
             .body<List<pl.quicktask.app.scheduled.model.ScheduledTaskDto>>()
             .map { mapper.scheduledTask(it) }
@@ -63,6 +70,7 @@ class ItemSyncService(
 
     override suspend fun refreshViews(inbox: Boolean, trash: Boolean) {
         store.invalidateCache()
+        queries.getProjects(forceFetch = true).getOrThrow()
         if (inbox) queries.getItems(forceFetch = true).getOrThrow()
         if (trash) queries.getTrashItems(forceFetch = true).getOrThrow()
     }

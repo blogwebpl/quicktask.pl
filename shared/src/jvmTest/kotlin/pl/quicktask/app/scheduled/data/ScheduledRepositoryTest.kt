@@ -59,6 +59,7 @@ class ScheduledRepositoryTest {
                         jsonHeaders,
                     )
                 }
+                "/inbox/projects" -> respond("{}", HttpStatusCode.OK, jsonHeaders)
                 "/inbox/trash" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
                 else -> error("Unexpected URL: ${request.url.encodedPath}")
             }
@@ -81,7 +82,7 @@ class ScheduledRepositoryTest {
             )
 
             assertEquals("item-123", result.getOrThrow())
-            assertEquals(listOf("/items", "/inbox/trash"), paths)
+            assertEquals(listOf("/items", "/inbox/projects", "/inbox/trash"), paths)
 
             val json = Json.parseToJsonElement(assertNotNull(requestBody)).jsonObject
             assertEquals("SCHEDULED", json.getValue("type").jsonPrimitive.content)
@@ -147,6 +148,7 @@ class ScheduledRepositoryTest {
                     requestBody = (request.body as TextContent).text
                     respond("", HttpStatusCode.OK, jsonHeaders)
                 }
+                "/inbox/projects" -> respond("{}", HttpStatusCode.OK, jsonHeaders)
                 "/inbox/trash" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
                 else -> error("Unexpected URL: ${request.url.encodedPath}")
             }
@@ -172,7 +174,7 @@ class ScheduledRepositoryTest {
             )
 
             assertTrue(result.isSuccess)
-            assertEquals(listOf("/inbox/$itemId/scheduled", "/inbox/trash"), paths)
+            assertEquals(listOf("/inbox/$itemId/scheduled", "/inbox/projects", "/inbox/trash"), paths)
             val json = Json.parseToJsonElement(assertNotNull(requestBody)).jsonObject
             assertEquals(
                 listOf(attachmentId),
@@ -209,6 +211,7 @@ class ScheduledRepositoryTest {
                     requestBody = (request.body as TextContent).text
                     respond("", HttpStatusCode.NoContent, jsonHeaders)
                 }
+                "/inbox/projects" -> respond("{}", HttpStatusCode.OK, jsonHeaders)
                 "/inbox", "/inbox/trash" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
                 else -> error("Unexpected URL: ${request.url.encodedPath}")
             }
@@ -252,7 +255,7 @@ class ScheduledRepositoryTest {
 
             assertTrue(result.isSuccess)
             assertEquals(
-                listOf("/inbox/$itemId/scheduled", "/inbox", "/inbox/trash"),
+                listOf("/inbox/$itemId/scheduled", "/inbox/projects", "/inbox", "/inbox/trash"),
                 paths,
             )
             val json = Json.parseToJsonElement(assertNotNull(requestBody)).jsonObject

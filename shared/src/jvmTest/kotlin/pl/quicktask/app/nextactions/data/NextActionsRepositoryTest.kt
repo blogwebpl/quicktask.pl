@@ -29,6 +29,7 @@ class NextActionsRepositoryTest {
 
         val client = HttpClient(MockEngine { request ->
             when (request.url.encodedPath) {
+                "/inbox/projects" -> respond("{}", HttpStatusCode.OK, headersOf("Content-Type", ContentType.Application.Json.toString()))
                 "/inbox/item-123/next-action" -> {
                     assertEquals("POST", request.method.value)
                     requestBody = (request.body as TextContent).text
