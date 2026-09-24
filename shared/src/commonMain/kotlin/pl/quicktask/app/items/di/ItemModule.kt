@@ -47,8 +47,9 @@ class ItemModule(
     val scheduled: ScheduledOperations = ScheduledRepository(api, mapper, store, sync, files)
     val now: NowOperations = NowRepository(api, mapper, sync, store)
     val trash = TrashRepository(api, store, queries, sync)
-    val completed = CompletedItemsRepository(api, mapper, sync)
+    val completed = CompletedItemsRepository(api, queries, sync, store)
     val projects: pl.quicktask.app.projects.data.ProjectsOperations = pl.quicktask.app.projects.data.ProjectsRepository(api, mapper, store, sync, files, queries)
     val lifecycle = ItemLifecycleService(api, sync)
+    val contacts = pl.quicktask.app.contacts.ContactsRepository(api, mapper, sync, keysProvider)
     val settings: SettingsOperations = settingsOperations ?: SettingsRepository(api)
 }

@@ -28,8 +28,11 @@ internal class AuthApiClient(
     suspend fun startRegistration(request: StartRegistrationRequestDto): StartRegistrationResponseDto =
         post("auth/register/start", request)
 
-    suspend fun finishRegistration(request: FinishRegistrationRequestDto) {
-        postWithoutResponse("auth/register/finish", request)
+    suspend fun finishRegistration(request: FinishRegistrationRequestDto): FinishRegistrationResponseDto =
+        post("auth/register/finish", request)
+
+    suspend fun verifyRegistration(request: VerifyRegistrationRequestDto) {
+        postWithoutResponse("auth/register/verify", request)
     }
 
     suspend fun startLogin(request: StartLoginRequestDto): StartLoginResponseDto =

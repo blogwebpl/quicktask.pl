@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import pl.quicktask.app.items.model.InboxItem
+import pl.quicktask.app.items.model.CompletedInTwoMinutesItem
 import pl.quicktask.app.nextactions.model.NextAction
 import pl.quicktask.app.scheduled.model.ScheduledTask
 import pl.quicktask.app.trash.model.TrashItem
@@ -24,6 +25,8 @@ class ItemStore {
     class PendingOperation internal constructor(val id: Long, val itemId: String, val realId: String? = null)
     private data class Change(val operation: PendingOperation, val item: InboxItem?)
     private data class State(
+        val completed: List<CompletedInTwoMinutesItem> = emptyList(),
+        val completedLoaded: Boolean = false,
         val inbox: List<InboxItem> = emptyList(),
         val nextActions: List<NextAction> = emptyList(),
         val scheduledTasks: List<ScheduledTask> = emptyList(),
@@ -36,6 +39,7 @@ class ItemStore {
         val nextId: Long = 0,
         val generation: Long = 0,
         val inboxValid: Boolean = false,
+        val inboxSnapshotVersion: Long = 0,
         val nextActionsValid: Boolean = false,
         val scheduledValid: Boolean = false,
         val projectsValid: Boolean = false,
@@ -63,7 +67,30 @@ class ItemStore {
         }
     }
     private val state = MutableStateFlow(State())
+    val completedItemsFlow: StateFlow<List<CompletedInTwoMinutesItem>> = ProjectedStateFlow(state) { it.completed }
+    val hasLoadedCompletedItems get() = state.value.completedLoaded
+
+    internal fun cacheCompleted(items: List<CompletedInTwoMinutesItem>, expectedGeneration: Long = generation): Boolean {
+        while (true) {
+            val before = state.value
+            if (before.generation != expectedGeneration) return false
+            if (state.compareAndSet(before, before.copy(completed = items, completedLoaded = true))) return true
+        }
+    }
+
+    internal fun applyCompleted(item: CompletedInTwoMinutesItem, targetItemId: String) = state.update {
+        it.copy(
+            generation = it.generation + 1,
+            completed = (it.completed.filterNot { old -> old.itemId == targetItemId } + item)
+                .sortedByDescending { entry -> entry.processedAt },
+            inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
+            nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
+            scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
+            trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+        )
+    }
     val itemsFlow: StateFlow<List<InboxItem>> = ProjectedStateFlow(state) { it.visibleInbox() }
+    val inboxSnapshotVersionFlow: StateFlow<Long> = ProjectedStateFlow(state) { it.inboxSnapshotVersion }
     val nextActionsFlow: StateFlow<List<NextAction>> = ProjectedStateFlow(state) { it.nextActions }
     val scheduledTasksFlow: StateFlow<List<ScheduledTask>> = ProjectedStateFlow(state) { it.scheduledTasks }
     val projectsFlow: StateFlow<List<pl.quicktask.app.projects.model.ProjectWithTasks>> = ProjectedStateFlow(state) { it.projects }
@@ -125,7 +152,12 @@ class ItemStore {
             val pending = if (completedOperation != null &&
                 before.pending[completedOperation.itemId]?.operation == completedOperation
             ) before.pending - completedOperation.itemId else before.pending
-            if (state.compareAndSet(before, before.copy(inbox = items, inboxValid = true, pending = pending))) return true
+            if (state.compareAndSet(before, before.copy(
+                    inbox = items,
+                    inboxValid = true,
+                    inboxSnapshotVersion = before.inboxSnapshotVersion + 1,
+                    pending = pending,
+                ))) return true
         }
     }
     internal fun cacheNextActions(items: List<NextAction>, expectedGeneration: Long = generation): Boolean {
@@ -205,6 +237,7 @@ class ItemStore {
         it.copy(
             generation = it.generation + 1,
             inbox = updatedInbox,
+            completed = it.completed.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
@@ -220,6 +253,7 @@ class ItemStore {
         it.copy(
             generation = it.generation + 1,
             nextActions = updatedNextActions,
+            completed = it.completed.filterNot { old -> old.itemId == targetItemId },
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
@@ -235,6 +269,7 @@ class ItemStore {
         it.copy(
             generation = it.generation + 1,
             scheduledTasks = updatedScheduledTasks,
+            completed = it.completed.filterNot { old -> old.itemId == targetItemId },
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
@@ -250,6 +285,7 @@ class ItemStore {
         it.copy(
             generation = it.generation + 1,
             trash = updatedTrash,
+            completed = it.completed.filterNot { old -> old.itemId == targetItemId },
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
@@ -259,6 +295,7 @@ class ItemStore {
         it.copy(
             generation = it.generation + 1,
             inbox = it.inbox.filterNot { item -> item.itemId == itemId },
+            completed = it.completed.filterNot { item -> item.itemId == itemId },
             nextActions = it.nextActions.filterNot { item -> item.itemId == itemId },
             scheduledTasks = it.scheduledTasks.filterNot { item -> item.itemId == itemId },
             trash = it.trash.filterNot { item -> item.itemId == itemId },

@@ -103,6 +103,17 @@ class SyncEventParser {
 
         return when (finalEventName) {
             "sync.required" -> SyncEvent.SyncRequired
+            "contacts.changed" -> {
+                val finalEventId = sseId?.takeIf { it.isNotBlank() } ?: jsonEventId
+                if (!finalEventId.isNullOrBlank()) {
+                    SyncEvent.ContactsChanged(
+                        eventId = finalEventId,
+                        changedAt = jsonChangedAt,
+                    )
+                } else {
+                    null
+                }
+            }
             "items.changed" -> {
                 val finalEventId = sseId?.takeIf { it.isNotBlank() } ?: jsonEventId
                 if (!finalEventId.isNullOrBlank()) {

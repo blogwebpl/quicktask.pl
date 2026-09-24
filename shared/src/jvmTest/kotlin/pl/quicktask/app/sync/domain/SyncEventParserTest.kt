@@ -62,6 +62,22 @@ class SyncEventParserTest {
     }
 
     @Test
+    fun testParseContactsChanged() {
+        val parser = SyncEventParser()
+        val events = listOf(
+            "event: contacts.changed",
+            "id: contact-event-1",
+            "data: {\"event\":\"contacts.changed\",\"eventId\":\"contact-event-1\",\"changedAt\":\"2026-09-22T10:00:00.000Z\"}",
+            "",
+        ).flatMap(parser::feedLine)
+
+        assertEquals(
+            SyncEvent.ContactsChanged("contact-event-1", "2026-09-22T10:00:00.000Z"),
+            events.single(),
+        )
+    }
+
+    @Test
     fun testIgnoreHeartbeatAndComments() {
         val parser = SyncEventParser()
         val lines = listOf(

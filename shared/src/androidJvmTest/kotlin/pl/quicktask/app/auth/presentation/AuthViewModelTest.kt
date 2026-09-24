@@ -13,6 +13,7 @@ import pl.quicktask.app.auth.data.AuthOperations
 import pl.quicktask.app.auth.model.FinishLoginResponseDto
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.error_user_keys_locked
+import todo.shared.generated.resources.password_min_length
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,6 +77,73 @@ class AuthViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun validRegistrationShowsServerResult() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val repository = RegistrationAuthOperations()
+        val viewModels = ViewModelStore()
+        try {
+            val viewModel = AuthViewModel(repository)
+            viewModels.put("auth", viewModel)
+
+            viewModel.register("new@example.com", "long-password")
+            assertTrue(viewModel.uiState.value.isLoading)
+
+            runCurrent()
+
+            assertEquals(1, repository.registerCalls)
+            assertEquals("new@example.com", repository.registeredEmail)
+            assertEquals(AuthUiState(registrationId = "registration-id"), viewModel.uiState.value)
+        } finally {
+            viewModels.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun shortRegistrationPasswordDoesNotCallServer() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val repository = RegistrationAuthOperations()
+        val viewModels = ViewModelStore()
+        try {
+            val viewModel = AuthViewModel(repository)
+            viewModels.put("auth", viewModel)
+
+            viewModel.register("new@example.com", "short")
+            runCurrent()
+
+            assertEquals(0, repository.registerCalls)
+            assertEquals(
+                AuthUiState(errorMessageRes = Res.string.password_min_length),
+                viewModel.uiState.value,
+            )
+        } finally {
+            viewModels.clear()
+            Dispatchers.resetMain()
+        }
+    }
+}
+
+private class RegistrationAuthOperations : AuthOperations {
+    override val isLoggedIn = false
+    var registerCalls = 0
+        private set
+    var registeredEmail: String? = null
+        private set
+
+    override suspend fun register(email: String, password: String): Result<String> {
+        registerCalls++
+        registeredEmail = email
+        return Result.success("registration-id")
+    }
+
+    override suspend fun tryRestoreCachedKeys(): Boolean = false
+
+    override suspend fun logout() = Unit
+
+    override suspend fun login(email: String, password: String): Result<FinishLoginResponseDto> =
+        error("Login is not expected in a registration test")
 }
 
 private class SavedSessionAuthOperations : AuthOperations {

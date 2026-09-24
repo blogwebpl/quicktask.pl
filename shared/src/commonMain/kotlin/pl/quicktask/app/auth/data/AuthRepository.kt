@@ -27,7 +27,7 @@ class AuthRepository internal constructor(
     override val isLoggedIn: Boolean
         get() = sessionManager.isLoggedIn || (browserSessions && browserRememberedEmail().isNotBlank())
 
-    suspend fun register(email: String, password: String): Result<Unit> = withContext(dispatcher) {
+    override suspend fun register(email: String, password: String): Result<String> = withContext(dispatcher) {
         coroutineResult {
             refresher.reset()
             dPoPManager.clearKeyPair()
@@ -47,7 +47,7 @@ class AuthRepository internal constructor(
             val userPair = generateUserKeyPair()
             val privateKey = userPair.privateKeyPkcs8 ?: error("Nie można wyeksportować klucza prywatnego")
             val wrapped = wrapPrivateKey(opaqueFinish.exportKey, privateKey)
-            api.finishRegistration(
+            val pending = api.finishRegistration(
                 FinishRegistrationRequestDto(
                     email = cleanEmail,
                     registrationRecord = opaqueFinish.registrationRecord,
@@ -56,11 +56,18 @@ class AuthRepository internal constructor(
                     privateKeyNonce = wrapped.nonce,
                 ),
             )
-            login(cleanEmail, password).getOrThrow()
-            Unit
+            pending.registrationId
             } finally { opaqueManager.discardState(opaqueStart.clientRegistrationState) }
         }
     }
+
+    override suspend fun verifyRegistration(registrationId: String, code: String, email: String, password: String): Result<FinishLoginResponseDto> =
+        withContext(dispatcher) {
+            coroutineResult {
+                api.verifyRegistration(VerifyRegistrationRequestDto(registrationId, code.trim().lowercase()))
+                login(email, password).getOrThrow()
+            }
+        }
 
     override suspend fun login(email: String, password: String): Result<FinishLoginResponseDto> =
         withContext(dispatcher) {

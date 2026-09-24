@@ -3,10 +3,13 @@ package pl.quicktask.app.auth.model
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
 import kotlinx.coroutines.runBlocking
 import pl.quicktask.app.auth.crypto.DefaultOpaqueManager
 import pl.quicktask.app.auth.crypto.generateUserKeyPair
 import pl.quicktask.app.auth.crypto.OpaqueManager
+import pl.quicktask.app.auth.crypto.OpaqueRegisterFinishResult
+import pl.quicktask.app.auth.crypto.OpaqueRegisterStartResult
 import pl.quicktask.app.auth.crypto.OpaqueStartResult
 import pl.quicktask.app.auth.crypto.OpaqueFinishResult
 import pl.quicktask.app.auth.crypto.UserKeyMaterialDto
@@ -23,6 +26,62 @@ import pl.quicktask.app.testing.TestSettings
 import kotlin.test.*
 
 class ModuleIsolationAndLoggingTest {
+    @Test
+    fun registrationNeverSendsPasswordToServer() = runBlocking {
+        val password = "client-only-password"
+        val exportKey = ByteArray(64) { it.toByte() }.toBase64Url()
+        val requestBodies = mutableListOf<String>()
+        val opaque = object : OpaqueManager by DefaultOpaqueManager() {
+            override suspend fun startRegistration(password: String): OpaqueRegisterStartResult {
+                assertEquals("client-only-password", password)
+                return OpaqueRegisterStartResult("opaque-registration-request", "client-state")
+            }
+
+            override suspend fun finishRegistration(
+                password: String,
+                clientRegistrationState: String,
+                registrationResponse: String,
+                email: String,
+                serverOrigin: String,
+            ): OpaqueRegisterFinishResult {
+                assertEquals("client-only-password", password)
+                return OpaqueRegisterFinishResult("opaque-registration-record", exportKey)
+            }
+        }
+        val client = mockClient(MockEngine { request ->
+            requestBodies += (request.body as TextContent).text
+            when (request.url.encodedPath) {
+                "/auth/register/start" -> respond(
+                    """{"registrationResponse":"opaque-server-response"}""",
+                    headers = jsonHeaders,
+                )
+                "/auth/register/finish" -> respond(
+                    """{"registrationId":"registration-id"}""",
+                    HttpStatusCode.Created,
+                    jsonHeaders,
+                )
+                else -> error("Unexpected endpoint")
+            }
+        })
+        try {
+            val module = AppModule(
+                client,
+                SessionManager(TestSettings()),
+                RecordingDPoP(),
+                opaque,
+                KeyCache(TestSettings()),
+                "https://example.test",
+            )
+
+            assertEquals("registration-id", module.auth.register("user@example.test", password).getOrThrow())
+            assertEquals(2, requestBodies.size)
+            assertFalse(requestBodies.any { password in it })
+            assertFalse(requestBodies.any { "\"password\"" in it })
+        } finally {
+            client.close()
+        }
+    }
+
     @Test
     fun loginRecoversKeysAndCacheThenLogoutClearsBoth() = runBlocking {
         val pair = generateUserKeyPair()

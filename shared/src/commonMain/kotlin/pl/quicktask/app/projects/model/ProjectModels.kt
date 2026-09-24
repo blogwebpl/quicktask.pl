@@ -25,6 +25,7 @@ data class ProjectTaskDto(
     val deferUntil: String? = null,
     val scheduledAt: String? = null,
     val waitingFor: String? = null,
+    val assignedByUserId: String? = null,
     val waitingSince: String? = null,
     val followUpAt: String? = null,
     val reviewedAt: String? = null,
@@ -54,6 +55,8 @@ data class ProjectsResponseDto(
 
 @Serializable
 data class CreateWaitingTaskRequestDto(
+    val assignedToUserId: String? = null,
+    val recipientEncryptedItemKey: String? = null,
     val type: String = "WAITING",
     val encryptedTitle: String,
     val encryptedItemKey: String,
@@ -67,6 +70,8 @@ data class CreateWaitingTaskRequestDto(
 
 @Serializable
 data class ConvertInboxToWaitingRequestDto(
+    val assignedToUserId: String? = null,
+    val recipientEncryptedItemKey: String? = null,
     val projectId: String? = null,
     val dueAt: String? = null,
     val waitingFor: String,

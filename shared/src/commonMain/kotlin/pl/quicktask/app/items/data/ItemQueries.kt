@@ -9,6 +9,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import pl.quicktask.app.items.domain.ItemCryptoMapper
 import pl.quicktask.app.items.model.InboxItem
+import pl.quicktask.app.items.model.CompletedInTwoMinutesItem
+import pl.quicktask.app.items.model.CompletedInTwoMinutesItemDto
 import pl.quicktask.app.items.model.InboxItemDto
 import pl.quicktask.app.items.model.itemResult
 import pl.quicktask.app.items.store.ItemStore
@@ -26,6 +28,21 @@ class ItemQueries(
     private val inboxFlight = SingleFlight<List<InboxItem>>()
     private val trashFlight = SingleFlight<List<TrashItem>>()
     private val projectsFlight = SingleFlight<ProjectsResult>()
+    private val completedFlight = SingleFlight<List<CompletedInTwoMinutesItem>>()
+
+    suspend fun getCompletedInTwoMinutes(): Result<List<CompletedInTwoMinutesItem>> =
+        completedFlight.run(store.generation) {
+            itemResult {
+                while (true) {
+                    val generation = store.generation
+                    val items = api.request(HttpMethod.Get, "inbox/completed-in-two-minutes")
+                        .body<List<CompletedInTwoMinutesItemDto>>().map { mapper.completed(it) }
+                        .sortedByDescending { it.processedAt }
+                    if (store.cacheCompleted(items, generation)) break
+                }
+                store.completedItemsFlow.value
+            }
+        }
 
     suspend fun getProjects(forceFetch: Boolean = false): Result<ProjectsResult> {
         if (!forceFetch && store.isProjectsCacheValid) return Result.success(store.projectsOverviewFlow.value)

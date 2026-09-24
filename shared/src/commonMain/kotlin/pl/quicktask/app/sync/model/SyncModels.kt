@@ -2,6 +2,10 @@ package pl.quicktask.app.sync.model
 
 sealed class SyncEvent {
     data object SyncRequired : SyncEvent()
+    data class ContactsChanged(
+        val eventId: String,
+        val changedAt: String? = null,
+    ) : SyncEvent()
     data class ItemsChanged(
         val eventId: String,
         val itemId: String? = null,

@@ -14,8 +14,10 @@ import io.ktor.util.encodeBase64
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
@@ -435,6 +437,34 @@ class SyncCoordinatorTest {
         } finally {
             testScope.cancel()
         }
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test
+    fun contactsChangedNotifiesActiveCollectorOnce() = runTest {
+        val coordinator = SyncCoordinator(
+            keyStore = keyStore,
+            logout = { sessionManager.clearSession() },
+            sessionRefresher = pl.quicktask.app.auth.data.SessionRefresher { Result.success(Unit) },
+            sessionManager = sessionManager,
+            dPoPManager = dPoPManager,
+            itemSyncService = RecordingItemSync(),
+            syncEventSource = fakeEventSource,
+            coroutineScope = backgroundScope,
+            randomJitterSupplier = { it },
+        )
+        var eventSink: ((SyncEvent) -> Unit)? = null
+        fakeEventSource.onConnectCallback = { eventSink = it }
+        coordinator.onAppForeground()
+        runCurrent()
+        val notification = backgroundScope.async { coordinator.contactChanges.first() }
+        runCurrent()
+
+        assertNotNull(eventSink).invoke(SyncEvent.ContactsChanged("contacts-1"))
+        runCurrent()
+
+        assertEquals(Unit, notification.await())
+        coordinator.stop()
     }
 
     @Test

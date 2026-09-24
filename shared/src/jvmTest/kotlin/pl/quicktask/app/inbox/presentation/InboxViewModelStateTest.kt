@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewModelScope
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -13,9 +14,42 @@ import kotlinx.serialization.encodeToString
 import pl.quicktask.app.items.model.InputFile
 import pl.quicktask.app.items.support.*
 import kotlin.test.*
+import todo.shared.generated.resources.Res
+import todo.shared.generated.resources.error_fetch_items
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class InboxViewModelStateTest {
+    @Test
+    fun successfulBackgroundRefreshClearsOldFetchErrorEvenWhenInboxStaysEmpty(): Unit = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        var requestCount = 0
+        val client = mockClient(MockEngine {
+            if (requestCount++ == 0) respond("Bad Gateway", status = HttpStatusCode.BadGateway)
+            else respond("[]", headers = jsonHeaders)
+        })
+        val viewModels = ViewModelStore()
+        try {
+            val module = encryptedFixture().module(client)
+            val viewModel = InboxViewModel(module.inbox, module.store, module.lifecycle, module.completed)
+            viewModels.put("inbox", viewModel)
+            withTimeout(10000) {
+                viewModel.uiState.first { it.errorMessageRes == Res.string.error_fetch_items }
+            }
+
+            assertTrue(module.inbox.getItems(forceFetch = true).isSuccess)
+            withTimeout(10000) {
+                viewModel.uiState.first { it.errorMessageRes == null && !it.isLoading }
+            }
+            assertTrue(viewModel.uiState.value.items.isEmpty())
+        } finally {
+            val jobs = viewModels.keys().mapNotNull { viewModels[it]?.viewModelScope?.coroutineContext?.get(Job) }
+            viewModels.clear()
+            client.close()
+            jobs.forEach { it.join() }
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun refreshPreservesEditorStateAndListIsDrivenByStore(): Unit = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())

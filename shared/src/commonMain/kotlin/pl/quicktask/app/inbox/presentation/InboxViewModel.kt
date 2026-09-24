@@ -20,6 +20,7 @@ import pl.quicktask.app.items.presentation.itemErrorResource
 import pl.quicktask.app.items.store.ItemStore
 import pl.quicktask.app.nextactions.data.NextActionsOperations
 import pl.quicktask.app.nextactions.model.NewContextInput
+import pl.quicktask.app.projects.data.ProjectsOperations
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.error_delete_item
 import todo.shared.generated.resources.error_fetch_items
@@ -52,10 +53,23 @@ class InboxViewModel(
     )
 
     init {
+        var seenVersion = store.inboxSnapshotVersionFlow.value
         viewModelScope.launch {
             store.itemsFlow.collect { items ->
                 AppLoggerManager.logStateChange("InboxViewModel", "Aktualizacja listy elementów z magazynu", "count=${items.size}")
                 updateState { it.copy(items = items) }
+            }
+        }
+        viewModelScope.launch {
+            store.inboxSnapshotVersionFlow.collect { version ->
+                if (version > seenVersion) {
+                    updateState { state ->
+                        if (state.errorMessageRes == Res.string.error_fetch_items) {
+                            state.copy(errorMessageRes = null)
+                        } else state
+                    }
+                }
+                seenVersion = version
             }
         }
         loadItems()
@@ -69,7 +83,7 @@ class InboxViewModel(
             repository.getItems(forceFetch = true)
                 .onSuccess {
                     AppLoggerManager.logStateChange("InboxViewModel", "Pobrano zadania Inbox")
-                    updateState { it.copy(isLoading = false) }
+                    updateState { it.copy(isLoading = false, errorMessageRes = null) }
                 }
                 .onFailure { error ->
                     AppLoggerManager.logStateChange("InboxViewModel", "Błąd pobierania zadań Inbox", error.message)
@@ -192,6 +206,37 @@ class InboxViewModel(
                         newContexts = newContexts,
                         tagIds = tagIds,
                         newTagNames = newTagNames,
+                    )
+                },
+                refresh = { repository.getItems() },
+                onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
+                onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
+            )
+        }
+    }
+
+    fun convertToWaiting(
+        itemId: String,
+        projectId: String?,
+        dueAt: String?,
+        waitingFor: String,
+        followUpAt: String?,
+        projectsOperations: ProjectsOperations,
+    ) {
+        AppLoggerManager.logFunction("InboxViewModel", "convertToWaiting", "itemId=$itemId")
+        val targetItem = _uiState.value.items.find { it.itemId == itemId }
+        if (targetItem?.isPendingConfirmation == true) return
+        val operation = store.beginOperation(itemId, null) ?: return
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            runPendingItemMutation(
+                store, operation,
+                mutate = {
+                    projectsOperations.convertInboxToWaiting(
+                        itemId = itemId,
+                        projectId = projectId,
+                        dueAt = dueAt,
+                        waitingFor = waitingFor,
+                        followUpAt = followUpAt,
                     )
                 },
                 refresh = { repository.getItems() },

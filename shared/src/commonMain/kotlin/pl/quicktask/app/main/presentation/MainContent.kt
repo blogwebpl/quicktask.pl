@@ -18,6 +18,9 @@ fun MainContent(
     onFabClick: () -> Unit = {},
 ) {
     when (currentScreen) {
+        Screen.COMPLETED -> {
+            pl.quicktask.app.completed.presentation.CompletedScreen(module, onOpenDrawer)
+        }
         Screen.INBOX -> {
             InboxScreen(
                 module = module,
@@ -38,6 +41,12 @@ fun MainContent(
         }
         Screen.SCHEDULED -> {
             pl.quicktask.app.scheduled.presentation.ScheduledScreen(
+                module = module,
+                onOpenDrawer = onOpenDrawer,
+            )
+        }
+        Screen.WAITING -> {
+            pl.quicktask.app.waiting.presentation.WaitingScreen(
                 module = module,
                 onOpenDrawer = onOpenDrawer,
             )

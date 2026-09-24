@@ -118,6 +118,10 @@ kotlin {
             implementation(files("libs/opaque-kmp-classes.jar"))
             implementation("net.java.dev.jna:jna:5.17.0")
         }
+        jvmTest.dependencies {
+            implementation(libs.compose.uiTestJunit4)
+            implementation(compose.desktop.currentOs)
+        }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }

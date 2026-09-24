@@ -8,6 +8,8 @@ fun interface SessionRefresher {
 
 interface AuthOperations {
     val isLoggedIn: Boolean
+    suspend fun register(email: String, password: String): Result<String> = Result.failure(UnsupportedOperationException())
+    suspend fun verifyRegistration(registrationId: String, code: String, email: String, password: String): Result<FinishLoginResponseDto> = Result.failure(UnsupportedOperationException())
     suspend fun login(email: String, password: String): Result<FinishLoginResponseDto>
     suspend fun tryRestoreCachedKeys(): Boolean
     suspend fun logout()

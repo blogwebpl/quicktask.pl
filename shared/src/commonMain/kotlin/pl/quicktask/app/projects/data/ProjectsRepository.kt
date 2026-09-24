@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import pl.quicktask.app.auth.crypto.createItemKey
+import pl.quicktask.app.auth.crypto.encryptText
 import pl.quicktask.app.auth.model.ApiException
 import pl.quicktask.app.items.data.FileOperations
 import pl.quicktask.app.items.data.ItemQueries
@@ -123,10 +124,11 @@ class ProjectsRepository(
         waitingFor: String,
         followUpAt: String?,
     ): Result<Unit> = itemResult {
+        val item = queries.getItems(forceFetch = false).getOrThrow().first { it.itemId == itemId }
         val request = ConvertInboxToWaitingRequestDto(
             projectId = projectId,
             dueAt = dueAt,
-            waitingFor = waitingFor,
+            waitingFor = encryptText(item.itemKey, waitingFor),
             followUpAt = followUpAt,
         )
         api.request(HttpMethod.Post, "inbox/$itemId/waiting") {

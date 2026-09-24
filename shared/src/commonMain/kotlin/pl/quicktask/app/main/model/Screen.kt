@@ -15,6 +15,7 @@ import todo.shared.generated.resources.screen_waiting
 import todo.shared.generated.resources.screen_review
 import todo.shared.generated.resources.settings
 
+
 enum class Screen(val id: String, val titleRes: StringResource) {
     INBOX("inbox", Res.string.screen_inbox),
     NOW("now", Res.string.screen_now),

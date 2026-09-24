@@ -23,6 +23,15 @@ data class FinishRegistrationRequestDto(
 )
 
 @Serializable
+data class FinishRegistrationResponseDto(val registrationId: String)
+
+@Serializable
+data class VerifyRegistrationRequestDto(
+    val registrationId: String,
+    val verificationCode: String,
+)
+
+@Serializable
 data class StartLoginRequestDto(
     val email: String,
     val startLoginRequest: String,

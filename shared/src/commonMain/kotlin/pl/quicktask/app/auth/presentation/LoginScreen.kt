@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,12 @@ import todo.shared.generated.resources.email
 import todo.shared.generated.resources.login_button
 import todo.shared.generated.resources.password
 import todo.shared.generated.resources.remember_unlock_checkbox
+import todo.shared.generated.resources.register_button
+import todo.shared.generated.resources.register_switch
+import todo.shared.generated.resources.login_switch
+import todo.shared.generated.resources.verification_code
+import todo.shared.generated.resources.verification_hint
+import todo.shared.generated.resources.verify_button
 
 @Composable
 fun LoginScreen(
@@ -70,6 +77,8 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("admin@example.com") }
     var password by remember { mutableStateOf("admin") }
+    var registering by remember { mutableStateOf(false) }
+    var verificationCode by remember { mutableStateOf("") }
     var rememberUnlock by remember { mutableStateOf(false) }
 
     Box(
@@ -117,40 +126,66 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(stringResource(Res.string.email) + " *") },
-                    enabled = !uiState.isLoading,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
-                        imeAction = ImeAction.Next,
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                )
+                if (uiState.registrationId != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.verification_hint),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(12.dp),
+                        )
+                    }
+                    OutlinedTextField(
+                        value = verificationCode,
+                        onValueChange = { verificationCode = it },
+                        label = { Text(stringResource(Res.string.verification_code)) },
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text(stringResource(Res.string.email) + " *") },
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                    )
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(stringResource(Res.string.password) + " *") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    enabled = !uiState.isLoading,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            if (browserSessions) rememberBrowserUnlock(rememberUnlock)
-                            viewModel.login(email, password)
-                        },
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(Res.string.password) + " *") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        enabled = !uiState.isLoading,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (registering) viewModel.register(email, password)
+                                else {
+                                    if (browserSessions) rememberBrowserUnlock(rememberUnlock)
+                                    viewModel.login(email, password)
+                                }
+                            },
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                    )
+                }
 
                 val displayedError = when {
                     uiState.errorMessage != null -> uiState.errorMessage
@@ -173,7 +208,7 @@ fun LoginScreen(
                     }
                 }
 
-                if (browserSessions) {
+                if (browserSessions && !registering && uiState.registrationId == null) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -200,10 +235,16 @@ fun LoginScreen(
                     }
                 }
 
-                val onLoginClick = remember(viewModel, email, password, rememberUnlock) {
+                val onLoginClick = remember(viewModel, email, password, rememberUnlock, registering, verificationCode, uiState.registrationId) {
                     {
-                        if (browserSessions) rememberBrowserUnlock(rememberUnlock)
-                        viewModel.login(email, password)
+                        when {
+                            uiState.registrationId != null -> viewModel.verifyRegistration(verificationCode, email, password)
+                            registering -> viewModel.register(email, password)
+                            else -> {
+                                if (browserSessions) rememberBrowserUnlock(rememberUnlock)
+                                viewModel.login(email, password)
+                            }
+                        }
                     }
                 }
 
@@ -211,7 +252,9 @@ fun LoginScreen(
 
                 Button(
                     onClick = onLoginClick,
-                    enabled = !uiState.isLoading,
+                    enabled = !uiState.isLoading &&
+                        (if (uiState.registrationId != null) verificationCode.isNotBlank()
+                         else email.isNotBlank() && password.isNotBlank()),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -225,10 +268,25 @@ fun LoginScreen(
                         )
                     } else {
                         Text(
-                            text = stringResource(Res.string.login_button),
+                            text = stringResource(when {
+                                uiState.registrationId != null -> Res.string.verify_button
+                                registering -> Res.string.register_button
+                                else -> Res.string.login_button
+                            }),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
+                }
+                TextButton(
+                    onClick = {
+                        viewModel.cancelRegistration()
+                        registering = !registering
+                        verificationCode = ""
+                        if (registering) password = ""
+                    },
+                    enabled = !uiState.isLoading,
+                ) {
+                    Text(stringResource(if (registering) Res.string.login_switch else Res.string.register_switch))
                 }
             }
         }

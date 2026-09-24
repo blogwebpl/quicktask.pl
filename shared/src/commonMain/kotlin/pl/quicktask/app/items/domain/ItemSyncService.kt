@@ -2,6 +2,10 @@ package pl.quicktask.app.items.domain
 
 import io.ktor.client.call.body
 import io.ktor.http.HttpMethod
+import kotlinx.coroutines.CancellationException
+import pl.quicktask.app.common.AppLoggerManager
+import pl.quicktask.app.common.LogCategory
+import pl.quicktask.app.common.LogLevel
 import pl.quicktask.app.items.data.ItemQueries
 import pl.quicktask.app.items.model.ItemSyncStateResponseDto
 import pl.quicktask.app.items.model.itemResult
@@ -45,6 +49,7 @@ class ItemSyncService(
         when {
             dto.location == "inbox" -> store.applyInbox(mapper.syncInbox(item), targetId)
             dto.location == "trash" -> store.applyTrash(mapper.syncTrash(item), targetId)
+            dto.location == "completed-in-two-minutes" -> store.applyCompleted(mapper.syncCompleted(item), targetId)
             dto.location == "scheduled" || item.isScheduled -> {
                 store.applyScheduledTask(mapper.syncScheduledTask(item), targetId)
             }
@@ -56,22 +61,57 @@ class ItemSyncService(
     }
 
     override suspend fun refreshActiveViews() {
-        refreshViews()
+        try {
+            refreshViews()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            AppLoggerManager.log(
+                level = LogLevel.ERROR,
+                category = LogCategory.REFRESH,
+                tag = "ItemSyncService",
+                message = "Błąd podczas refreshViews() w refreshActiveViews: ${e.message}",
+            )
+        }
         val generation = store.generation
-        val nextActions = api.request(HttpMethod.Get, "inbox/next-actions")
-            .body<List<pl.quicktask.app.nextactions.model.NextActionDto>>()
-            .map { mapper.nextAction(it) }
-        store.cacheNextActions(nextActions, generation)
-        val tasks = api.request(HttpMethod.Get, "inbox/scheduled")
-            .body<List<pl.quicktask.app.scheduled.model.ScheduledTaskDto>>()
-            .map { mapper.scheduledTask(it) }
-        store.cacheScheduledTasks(tasks, generation)
+        try {
+            val nextActions = api.request(HttpMethod.Get, "inbox/next-actions")
+                .body<List<pl.quicktask.app.nextactions.model.NextActionDto>>()
+                .map { mapper.nextAction(it) }
+            store.cacheNextActions(nextActions, generation)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            AppLoggerManager.log(
+                level = LogLevel.ERROR,
+                category = LogCategory.REFRESH,
+                tag = "ItemSyncService",
+                message = "Błąd podczas pobierania next-actions w refreshActiveViews: ${e.message}",
+            )
+        }
+        try {
+            val tasks = api.request(HttpMethod.Get, "inbox/scheduled")
+                .body<List<pl.quicktask.app.scheduled.model.ScheduledTaskDto>>()
+                .map { mapper.scheduledTask(it) }
+            store.cacheScheduledTasks(tasks, generation)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            AppLoggerManager.log(
+                level = LogLevel.ERROR,
+                category = LogCategory.REFRESH,
+                tag = "ItemSyncService",
+                message = "Błąd podczas pobierania scheduled w refreshActiveViews: ${e.message}",
+            )
+        }
     }
 
     override suspend fun refreshViews(inbox: Boolean, trash: Boolean) {
         store.invalidateCache()
+        if (store.hasLoadedCompletedItems) queries.getCompletedInTwoMinutes().getOrThrow()
         queries.getProjects(forceFetch = true).getOrThrow()
         if (inbox) queries.getItems(forceFetch = true).getOrThrow()
         if (trash) queries.getTrashItems(forceFetch = true).getOrThrow()
     }
 }
+

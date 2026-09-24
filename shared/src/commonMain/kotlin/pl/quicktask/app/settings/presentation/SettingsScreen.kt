@@ -121,8 +121,12 @@ import todo.shared.generated.resources.theme_section_title
 import todo.shared.generated.resources.timezone_hint
 import todo.shared.generated.resources.timezone_label
 import todo.shared.generated.resources.user_settings_section_title
+import todo.shared.generated.resources.contacts_title
+import todo.shared.generated.resources.contacts_settings_subtitle
+import androidx.compose.material.icons.filled.Person
 
 private enum class SettingsCategory {
+    CONTACTS,
     GENERAL,
     THEME,
     LOGS,
@@ -221,6 +225,7 @@ fun SettingsScreen(
                 )
             } else {
                 val categoryTitle = when (selectedCategory!!) {
+                    SettingsCategory.CONTACTS -> stringResource(Res.string.contacts_title)
                     SettingsCategory.GENERAL -> stringResource(Res.string.settings_category_account_title)
                     SettingsCategory.THEME -> stringResource(Res.string.settings_category_theme_title)
                     SettingsCategory.LOGS -> stringResource(Res.string.settings_category_logs_title)
@@ -240,6 +245,9 @@ fun SettingsScreen(
             }
         },
     ) { paddingValues ->
+        if (selectedCategory == SettingsCategory.CONTACTS) {
+            pl.quicktask.app.contacts.ContactsSettingsContent(module, Modifier.padding(paddingValues))
+        } else
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -294,6 +302,15 @@ fun SettingsScreen(
                     )
 
                     SettingsCategoryItem(
+                        title = stringResource(Res.string.contacts_title),
+                        subtitle = stringResource(Res.string.contacts_settings_subtitle),
+                        iconVector = Icons.Default.Person,
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        iconColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        onClick = { selectedCategory = SettingsCategory.CONTACTS },
+                    )
+
+                    SettingsCategoryItem(
                         title = stringResource(Res.string.settings_category_logs_title),
                         subtitle = logsSubtitle,
                         iconPainter = painterResource(Res.drawable.ic_list),
@@ -319,6 +336,8 @@ fun SettingsScreen(
                         onSaveClick = { viewModel.saveSettings(uiState.timeZone) },
                     )
                 }
+
+                SettingsCategory.CONTACTS -> Unit
 
                 SettingsCategory.THEME -> {
                     ThemeSettingsCard(

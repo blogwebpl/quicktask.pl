@@ -17,6 +17,7 @@ import pl.quicktask.app.common.LogLevel
 import pl.quicktask.app.common.NoOpAppLogger
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.error_user_keys_locked
+import todo.shared.generated.resources.password_min_length
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -24,6 +25,7 @@ data class AuthUiState(
     val errorMessageRes: StringResource? = null,
     val errorMessage: String? = null,
     val isLoggedIn: Boolean = false,
+    val registrationId: String? = null,
 )
 
 class AuthViewModel(
@@ -85,6 +87,54 @@ class AuthViewModel(
                 }
             }
         }
+    }
+
+    fun register(email: String, password: String) {
+        if (_uiState.value.isLoading) return
+        AppLoggerManager.logFunction("AuthViewModel", "register", "email=${email.trim()}")
+        if (password.length < 12) {
+            AppLoggerManager.logStateChange(
+                "AuthViewModel",
+                "Rejestracja zatrzymana przez walidację klienta",
+                "passwordLength=${password.length}, minimum=12",
+            )
+            _uiState.update { it.copy(errorMessageRes = Res.string.password_min_length, errorMessage = null) }
+            return
+        }
+        _uiState.update { AuthUiState(isLoading = true) }
+        viewModelScope.launch {
+            repository.register(email, password).onSuccess { id ->
+                AppLoggerManager.logStateChange("AuthViewModel", "Serwer przyjął rejestrację do weryfikacji")
+                _uiState.update { AuthUiState(registrationId = id) }
+            }.onFailure { error ->
+                AppLoggerManager.logStateChange("AuthViewModel", "Niepowodzenie rejestracji", error.message)
+                logger.log(LogLevel.WARNING, "auth.register", (error as? ApiException)?.statusCode, (error as? ApiException)?.code)
+                val (errorRes, customMsg) = mapAuthErrorToState(error)
+                _uiState.update { AuthUiState(errorMessageRes = errorRes, errorMessage = customMsg) }
+            }
+        }
+    }
+
+    fun verifyRegistration(code: String, email: String, password: String) {
+        val id = _uiState.value.registrationId ?: return
+        if (_uiState.value.isLoading) return
+        AppLoggerManager.logFunction("AuthViewModel", "verifyRegistration")
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, errorMessageRes = null) }
+        viewModelScope.launch {
+            repository.verifyRegistration(id, code, email, password).onSuccess {
+                AppLoggerManager.logStateChange("AuthViewModel", "Konto utworzone i użytkownik zalogowany")
+                _uiState.update { AuthUiState(isLoggedIn = true) }
+            }.onFailure { error ->
+                AppLoggerManager.logStateChange("AuthViewModel", "Niepowodzenie potwierdzenia rejestracji", error.message)
+                logger.log(LogLevel.WARNING, "auth.register.verify", (error as? ApiException)?.statusCode, (error as? ApiException)?.code)
+                val (errorRes, customMsg) = mapAuthErrorToState(error)
+                _uiState.update { AuthUiState(registrationId = id, errorMessageRes = errorRes, errorMessage = customMsg) }
+            }
+        }
+    }
+
+    fun cancelRegistration() {
+        _uiState.update { AuthUiState() }
     }
 
     fun logout() {

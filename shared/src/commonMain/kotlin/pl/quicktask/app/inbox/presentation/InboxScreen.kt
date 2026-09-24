@@ -36,6 +36,7 @@ import pl.quicktask.app.items.model.ProcessDestination
 import pl.quicktask.app.nextactions.model.NextActionOptions
 import pl.quicktask.app.ui.components.AppAddButton
 import pl.quicktask.app.ui.components.AppTopBar
+import pl.quicktask.app.waiting.presentation.WaitingTaskDialog
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.action_add_project
 import todo.shared.generated.resources.action_close
@@ -57,6 +58,7 @@ fun InboxScreen(
 
     val coroutineScope = rememberCoroutineScope()
     var itemToProcessToNextAction by remember { mutableStateOf<InboxItem?>(null) }
+    var itemToProcessToWaiting by remember { mutableStateOf<InboxItem?>(null) }
     var itemToProcessToScheduled by remember { mutableStateOf<InboxItem?>(null) }
     var itemToConvertToProject by remember { mutableStateOf<InboxItem?>(null) }
     var nextActionOptions by remember { mutableStateOf(NextActionOptions()) }
@@ -123,6 +125,14 @@ fun InboxScreen(
                                             itemToProcessToScheduled = item
                                             coroutineScope.launch {
                                                 module.items.scheduled.getNextActionOptions().onSuccess { options ->
+                                                    nextActionOptions = options
+                                                }
+                                            }
+                                        }
+                                        ProcessDestination.WAITING -> {
+                                            itemToProcessToWaiting = item
+                                            coroutineScope.launch {
+                                                module.items.nextActions.getNextActionOptions().onSuccess { options ->
                                                     nextActionOptions = options
                                                 }
                                             }
@@ -265,6 +275,33 @@ fun InboxScreen(
             onCreateProject = { title ->
                 module.items.nextActions.createProject(title).getOrNull()
             }
+        )
+    }
+
+    itemToProcessToWaiting?.let { item ->
+        WaitingTaskDialog(
+            title = item.title,
+            note = item.note,
+            options = nextActionOptions,
+            editableContent = false,
+            contactsRepository = module.items.contacts,
+            inboxItem = item,
+            onDelegated = { itemToProcessToWaiting = null },
+            onDismiss = { itemToProcessToWaiting = null },
+            onConfirm = { _, _, projectId, dueAt, waitingFor, followUpAt ->
+                viewModel.convertToWaiting(
+                    itemId = item.itemId,
+                    projectId = projectId,
+                    dueAt = dueAt,
+                    waitingFor = waitingFor,
+                    followUpAt = followUpAt,
+                    projectsOperations = module.items.projects,
+                )
+                itemToProcessToWaiting = null
+            },
+            onCreateProject = { projectTitle ->
+                module.items.nextActions.createProject(projectTitle).getOrNull()
+            },
         )
     }
 

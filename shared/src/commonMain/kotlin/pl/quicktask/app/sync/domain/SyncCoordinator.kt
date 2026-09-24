@@ -9,7 +9,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -20,6 +23,8 @@ import pl.quicktask.app.auth.crypto.KeyStore
 import pl.quicktask.app.auth.data.SessionRefresher
 import pl.quicktask.app.auth.session.SessionManager
 import pl.quicktask.app.common.AppLoggerManager
+import pl.quicktask.app.common.LogCategory
+import pl.quicktask.app.common.LogLevel
 import pl.quicktask.app.items.domain.ItemSyncOperations
 import pl.quicktask.app.network.client.SESSION_EXPIRED_STATUS
 import pl.quicktask.app.network.config.ApiConfig
@@ -45,6 +50,8 @@ class SyncCoordinator(
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Disconnected)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+    private val _contactChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val contactChanges: SharedFlow<Unit> = _contactChanges.asSharedFlow()
 
     private val deduplicator = EventDeduplicator(maxSize = 100)
     private val syncMutex = Mutex()
@@ -56,15 +63,37 @@ class SyncCoordinator(
 
     init {
         coroutineScope.launch {
-            keyStore.userKeys.collect { keys ->
-                if (keys != null && isAppInForeground && sessionManager.isLoggedIn) {
-                    coroutineScope.launch {
-                        itemSyncService.refreshActiveViews()
+            try {
+                keyStore.userKeys.collect { keys ->
+                    if (keys != null && isAppInForeground && sessionManager.isLoggedIn) {
+                        coroutineScope.launch {
+                            try {
+                                itemSyncService.refreshActiveViews()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Throwable) {
+                                AppLoggerManager.log(
+                                    level = LogLevel.ERROR,
+                                    category = LogCategory.REFRESH,
+                                    tag = "SyncCoordinator",
+                                    message = "Błąd w refreshActiveViews podczas zmiany userKeys: ${e.message}",
+                                )
+                            }
+                        }
+                        startSyncInternal()
+                    } else if (keys == null) {
+                        stopInternal()
                     }
-                    startSyncInternal()
-                } else if (keys == null) {
-                    stopInternal()
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                AppLoggerManager.log(
+                    level = LogLevel.ERROR,
+                    category = LogCategory.REFRESH,
+                    tag = "SyncCoordinator",
+                    message = "Błąd w pętli userKeys.collect: ${e.message}",
+                )
             }
         }
     }
@@ -107,17 +136,39 @@ class SyncCoordinator(
 
     private fun startSyncInternal() {
         coroutineScope.launch {
-            syncMutex.withLock {
-                if (syncJob?.isActive == true) {
-                    return@withLock
-                }
-                if (!canRunSync()) {
-                    return@withLock
-                }
+            try {
+                syncMutex.withLock {
+                    if (syncJob?.isActive == true) {
+                        return@withLock
+                    }
+                    if (!canRunSync()) {
+                        return@withLock
+                    }
 
-                syncJob = coroutineScope.launch {
-                    runSyncLoop()
+                    syncJob = coroutineScope.launch {
+                        try {
+                            runSyncLoop()
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Throwable) {
+                            AppLoggerManager.log(
+                                level = LogLevel.ERROR,
+                                category = LogCategory.STATE_CHANGE,
+                                tag = "SyncCoordinator",
+                                message = "Błąd w runSyncLoop: ${e.message}",
+                            )
+                        }
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                AppLoggerManager.log(
+                    level = LogLevel.ERROR,
+                    category = LogCategory.STATE_CHANGE,
+                    tag = "SyncCoordinator",
+                    message = "Błąd w startSyncInternal: ${e.message}",
+                )
             }
         }
     }
@@ -219,13 +270,30 @@ class SyncCoordinator(
             is SyncEvent.SyncRequired -> {
                 scheduleDebouncedRefresh()
             }
+            is SyncEvent.ContactsChanged -> {
+                if (!deduplicator.isDuplicate(event.eventId)) {
+                    _contactChanges.tryEmit(Unit)
+                }
+            }
             is SyncEvent.ItemsChanged -> {
                 if (!deduplicator.isDuplicate(event.eventId)) {
                     val itemId = event.itemId
                     if (!itemId.isNullOrBlank()) {
                         coroutineScope.launch {
-                            val result = itemSyncService.handleSyncStateForItem(itemId)
-                            if (result.isFailure) {
+                            try {
+                                val result = itemSyncService.handleSyncStateForItem(itemId)
+                                if (result.isFailure) {
+                                    scheduleDebouncedRefresh()
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Throwable) {
+                                AppLoggerManager.log(
+                                    level = LogLevel.ERROR,
+                                    category = LogCategory.REFRESH,
+                                    tag = "SyncCoordinator",
+                                    message = "Błąd w handleSyncStateForItem dla $itemId: ${e.message}",
+                                )
                                 scheduleDebouncedRefresh()
                             }
                         }
@@ -240,9 +308,20 @@ class SyncCoordinator(
     private fun scheduleDebouncedRefresh() {
         debounceJob?.cancel()
         debounceJob = coroutineScope.launch {
-            delay(debounceMs)
-            AppLoggerManager.logRefresh("SyncCoordinator", "Wykonanie odświeżenia widoków (refreshActiveViews)")
-            itemSyncService.refreshActiveViews()
+            try {
+                delay(debounceMs)
+                AppLoggerManager.logRefresh("SyncCoordinator", "Wykonanie odświeżenia widoków (refreshActiveViews)")
+                itemSyncService.refreshActiveViews()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                AppLoggerManager.log(
+                    level = LogLevel.ERROR,
+                    category = LogCategory.REFRESH,
+                    tag = "SyncCoordinator",
+                    message = "Błąd w debounced refreshActiveViews: ${e.message}",
+                )
+            }
         }
     }
 
@@ -274,3 +353,4 @@ class SyncCoordinator(
         }
     }
 }
+

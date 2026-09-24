@@ -107,6 +107,13 @@ class ItemCryptoMapper(
             dto.createdAt, dto.updatedAt, dto.deletedAt, dto.attachments, dto.tags),
     )
 
+    suspend fun syncCompleted(dto: SyncStateItemDto): CompletedInTwoMinutesItem = completed(
+        CompletedInTwoMinutesItemDto(
+            dto.itemId, dto.encryptedTitle, dto.encryptedNote, dto.encryptedItemKey,
+            dto.createdAt, dto.updatedAt, requireNotNull(dto.processedAt), dto.attachments, dto.tags,
+        ),
+    )
+
     suspend fun syncTrash(dto: SyncStateItemDto): TrashItem = trash(
         TrashItemDto(dto.itemId, dto.encryptedTitle, dto.encryptedNote, dto.encryptedItemKey,
             dto.createdAt, dto.updatedAt, dto.deletedAt ?: dto.updatedAt, dto.purgeAfter,
@@ -181,7 +188,7 @@ class ItemCryptoMapper(
             dueAt = dto.dueAt,
             deferUntil = dto.deferUntil,
             scheduledAt = dto.scheduledAt,
-            waitingFor = dto.waitingFor,
+            waitingFor = dto.waitingFor?.takeIf { it.isNotBlank() }?.let { decryptText(c.key, it) },
             waitingSince = dto.waitingSince,
             followUpAt = dto.followUpAt,
             reviewedAt = dto.reviewedAt,
@@ -248,7 +255,7 @@ class ItemCryptoMapper(
             dueAt = dto.dueAt,
             deferUntil = dto.deferUntil,
             scheduledAt = dto.scheduledAt,
-            waitingFor = dto.waitingFor,
+            waitingFor = dto.waitingFor?.takeIf { it.isNotBlank() }?.let { decryptText(c.key, it) },
             waitingSince = dto.waitingSince,
             followUpAt = dto.followUpAt,
             reviewedAt = dto.reviewedAt,
@@ -294,7 +301,7 @@ class ItemCryptoMapper(
             fileIds = fileIds?.ifEmpty { null },
             projectId = projectId,
             dueAt = dueAt,
-            waitingFor = waitingFor,
+            waitingFor = encryptText(key, waitingFor),
             followUpAt = followUpAt,
         )
     }
