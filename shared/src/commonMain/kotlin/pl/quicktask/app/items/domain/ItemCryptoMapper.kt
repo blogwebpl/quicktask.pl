@@ -35,6 +35,9 @@ import pl.quicktask.app.scheduled.model.UpdateScheduledTaskRequestDto
 import pl.quicktask.app.somedaymaybe.model.SomedayMaybeItem
 import pl.quicktask.app.somedaymaybe.model.SomedayMaybeItemDto
 import pl.quicktask.app.somedaymaybe.model.CreateSomedayMaybeRequestDto
+import pl.quicktask.app.references.model.ReferenceItem
+import pl.quicktask.app.references.model.ReferenceItemDto
+import pl.quicktask.app.references.model.CreateReferenceRequestDto
 
 import dev.whyoleg.cryptography.algorithms.AES
 import kotlinx.serialization.json.Json
@@ -187,6 +190,20 @@ class ItemCryptoMapper(
         )
     }
 
+    suspend fun reference(dto: ReferenceItemDto): ReferenceItem {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        return ReferenceItem(
+            itemId = dto.itemId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+        )
+    }
+
     suspend fun nowItem(dto: NowItemDto): NowItem {
         val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
         val decryptedProject = dto.project?.let { project(it) }
@@ -259,6 +276,20 @@ class ItemCryptoMapper(
     suspend fun syncSomedayMaybe(dto: SyncStateItemDto): SomedayMaybeItem {
         val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
         return SomedayMaybeItem(
+            itemId = dto.itemId,
+            title = c.title,
+            note = c.note,
+            itemKey = c.key,
+            createdAt = dto.createdAt,
+            updatedAt = dto.updatedAt,
+            attachments = c.attachments,
+            tags = dto.tags,
+        )
+    }
+
+    suspend fun syncReference(dto: SyncStateItemDto): ReferenceItem {
+        val c = content(dto.encryptedItemKey, dto.encryptedTitle, dto.encryptedNote, dto.attachments)
+        return ReferenceItem(
             itemId = dto.itemId,
             title = c.title,
             note = c.note,
@@ -402,6 +433,24 @@ class ItemCryptoMapper(
         val key = itemKey ?: createItemKey()
         return CreateSomedayMaybeRequestDto(
             type = "SOMEDAY_MAYBE",
+            encryptedTitle = encryptText(key, title),
+            encryptedItemKey = wrapItemKey(keys.publicKey, key),
+            encryptedNote = if (note.isNotBlank()) encryptText(key, note) else null,
+            tagIds = tagIds,
+            newTagNames = newTagNames,
+            fileIds = fileIds?.ifEmpty { null },
+        )
+    }
+
+    suspend fun createReferenceRequest(
+        title: String, note: String,
+        tagIds: List<String> = emptyList(), newTagNames: List<String> = emptyList(),
+        fileIds: List<String>? = null, itemKey: AES.GCM.Key? = null,
+    ): CreateReferenceRequestDto {
+        val keys = keysProvider.getUserKeys()
+        val key = itemKey ?: createItemKey()
+        return CreateReferenceRequestDto(
+            type = "REFERENCE",
             encryptedTitle = encryptText(key, title),
             encryptedItemKey = wrapItemKey(keys.publicKey, key),
             encryptedNote = if (note.isNotBlank()) encryptText(key, note) else null,

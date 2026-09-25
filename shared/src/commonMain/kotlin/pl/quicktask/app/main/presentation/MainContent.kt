@@ -7,6 +7,7 @@ import pl.quicktask.app.inbox.presentation.InboxScreen
 import pl.quicktask.app.main.model.Screen
 import pl.quicktask.app.nextactions.presentation.NextActionsScreen
 import pl.quicktask.app.now.presentation.NowScreen
+import pl.quicktask.app.references.presentation.ReferenceScreen
 import pl.quicktask.app.settings.presentation.SettingsScreen
 import pl.quicktask.app.trash.presentation.TrashScreen
 
@@ -62,6 +63,9 @@ fun MainContent(
                 module = module,
                 onOpenDrawer = onOpenDrawer,
             )
+        }
+        Screen.REFERENCE -> {
+            ReferenceScreen(module = module, onOpenDrawer = onOpenDrawer)
         }
         Screen.SETTINGS -> {
             SettingsScreen(

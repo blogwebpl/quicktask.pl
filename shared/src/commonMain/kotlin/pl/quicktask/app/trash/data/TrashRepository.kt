@@ -8,6 +8,7 @@ import pl.quicktask.app.items.model.itemResult
 import pl.quicktask.app.items.store.ItemStore
 import pl.quicktask.app.items.store.TrashOperationKind
 import pl.quicktask.app.network.client.AuthenticatedApiClient
+import pl.quicktask.app.references.data.ReferenceOperations
 import pl.quicktask.app.trash.model.TrashItem
 
 interface TrashOperations {
@@ -22,6 +23,7 @@ class TrashRepository(
     private val store: ItemStore,
     private val queries: ItemQueries,
     private val refresher: ItemViewRefresher,
+    private val references: ReferenceOperations? = null,
 ) : TrashOperations {
     override suspend fun getTrashItems(forceFetch: Boolean) = queries.getTrashItems(forceFetch)
 
@@ -43,6 +45,8 @@ class TrashRepository(
         refreshInbox: Boolean,
         request: suspend () -> Unit,
     ): Result<Unit> {
+        val restoringReference = kind == TrashOperationKind.Restore &&
+            store.trashItemsFlow.value.any { it.itemId == itemId && it.isReference }
         val operation = store.beginTrashOperation(itemId, kind)
             ?: return Result.failure(IllegalStateException("Trash operation already in progress"))
         try {
@@ -51,6 +55,7 @@ class TrashRepository(
                 if (itemId == null) store.setOptimisticTrash(emptyList()) else store.removeTrashItem(itemId)
                 store.invalidateCache()
                 refresher.refreshViews(inbox = refreshInbox)
+                if (restoringReference) references?.getReferenceItems(forceFetch = true)
             }
             if (result.isFailure) {
                 store.invalidateCache()

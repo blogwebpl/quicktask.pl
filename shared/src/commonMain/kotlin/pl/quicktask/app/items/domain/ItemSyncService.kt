@@ -50,6 +50,9 @@ class ItemSyncService(
             dto.location == "inbox" -> store.applyInbox(mapper.syncInbox(item), targetId)
             dto.location == "trash" -> store.applyTrash(mapper.syncTrash(item), targetId)
             dto.location == "completed-in-two-minutes" -> store.applyCompleted(mapper.syncCompleted(item), targetId)
+            dto.location == "references" || dto.location == "reference" || item.isReference -> {
+                store.applyReference(mapper.syncReference(item), targetId)
+            }
             dto.location == "scheduled" || item.isScheduled -> {
                 store.applyScheduledTask(mapper.syncScheduledTask(item), targetId)
             }
@@ -114,4 +117,3 @@ class ItemSyncService(
         if (trash) queries.getTrashItems(forceFetch = true).getOrThrow()
     }
 }
-

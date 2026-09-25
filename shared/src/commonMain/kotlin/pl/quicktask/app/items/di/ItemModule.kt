@@ -23,6 +23,8 @@ import pl.quicktask.app.settings.data.SettingsOperations
 import pl.quicktask.app.settings.data.SettingsRepository
 import pl.quicktask.app.somedaymaybe.data.SomedayMaybeOperations
 import pl.quicktask.app.somedaymaybe.data.SomedayMaybeRepository
+import pl.quicktask.app.references.data.ReferenceOperations
+import pl.quicktask.app.references.data.ReferenceRepository
 import pl.quicktask.app.trash.data.TrashRepository
 import pl.quicktask.app.scheduled.data.ScheduledRepository
 import pl.quicktask.app.scheduled.data.ScheduledOperations
@@ -47,9 +49,10 @@ class ItemModule(
     val inbox = InboxRepository(api, mapper, store, queries, files)
     val nextActions = NextActionsRepository(api, mapper, store, sync, files)
     val somedayMaybe: SomedayMaybeOperations = SomedayMaybeRepository(api, mapper, store, sync, files)
+    val references: ReferenceOperations = ReferenceRepository(api, mapper, store, sync, files)
     val scheduled: ScheduledOperations = ScheduledRepository(api, mapper, store, sync, files)
     val now: NowOperations = NowRepository(api, mapper, sync, store)
-    val trash = TrashRepository(api, store, queries, sync)
+    val trash = TrashRepository(api, store, queries, sync, references)
     val completed = CompletedItemsRepository(api, queries, sync, store)
     val projects: pl.quicktask.app.projects.data.ProjectsOperations = pl.quicktask.app.projects.data.ProjectsRepository(api, mapper, store, sync, files, queries)
     val lifecycle = ItemLifecycleService(api, sync)

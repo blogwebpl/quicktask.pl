@@ -21,6 +21,7 @@ import pl.quicktask.app.items.store.ItemStore
 import pl.quicktask.app.nextactions.data.NextActionsOperations
 import pl.quicktask.app.nextactions.model.NewContextInput
 import pl.quicktask.app.projects.data.ProjectsOperations
+import pl.quicktask.app.references.data.ReferenceOperations
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.error_delete_item
 import todo.shared.generated.resources.error_fetch_items
@@ -171,6 +172,26 @@ class InboxViewModel(
             runPendingItemMutation(
                 store, operation,
                 mutate = { projectsOperations.convertFromInbox(itemId) },
+                refresh = { repository.getItems(completedOperation = operation) },
+                onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
+                onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
+            )
+        }
+    }
+
+    fun convertToReference(
+        itemId: String,
+        tagIds: List<String>,
+        newTagNames: List<String>,
+        references: ReferenceOperations,
+    ) {
+        val targetItem = _uiState.value.items.find { it.itemId == itemId }
+        if (targetItem?.isPendingConfirmation == true) return
+        val operation = store.beginOperation(itemId, null) ?: return
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            runPendingItemMutation(
+                store, operation,
+                mutate = { references.convertFromInbox(itemId, tagIds, newTagNames) },
                 refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },

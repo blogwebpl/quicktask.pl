@@ -356,4 +356,10 @@
     <string name="contacts_status_incoming">Zaprasza Cię do kontaktów</string>
     <string name="contacts_status_sent">Czeka na akceptację</string>
     <string name="contacts_status_accepted">Możesz delegować zadania</string>
+    <string name="reference_add">New reference</string>
+    <string name="reference_empty">No reference materials</string>
+    <string name="reference_tags_edit">Edit tags</string>
+    <string name="reference_move_from_inbox">Move to reference</string>
+    <string name="reference_delete_question">Move “%1$s” to Trash?</string>
+    <string name="reference_tag_limit">Select up to 50 existing and 50 new tags. New tag names may contain up to 100 characters.</string>
 </resources>

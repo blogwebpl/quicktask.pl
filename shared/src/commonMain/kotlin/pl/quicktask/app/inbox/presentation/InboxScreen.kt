@@ -34,6 +34,7 @@ import pl.quicktask.app.inbox.presentation.dialogs.*
 import pl.quicktask.app.items.model.InboxItem
 import pl.quicktask.app.items.model.ProcessDestination
 import pl.quicktask.app.nextactions.model.NextActionOptions
+import pl.quicktask.app.references.presentation.ReferenceTagsDialog
 import pl.quicktask.app.ui.components.AppAddButton
 import pl.quicktask.app.ui.components.AppTopBar
 import pl.quicktask.app.waiting.presentation.WaitingTaskDialog
@@ -61,6 +62,7 @@ fun InboxScreen(
     var itemToProcessToWaiting by remember { mutableStateOf<InboxItem?>(null) }
     var itemToProcessToScheduled by remember { mutableStateOf<InboxItem?>(null) }
     var itemToConvertToProject by remember { mutableStateOf<InboxItem?>(null) }
+    var itemToConvertToReference by remember { mutableStateOf<InboxItem?>(null) }
     var nextActionOptions by remember { mutableStateOf(NextActionOptions()) }
 
     Scaffold(
@@ -139,6 +141,15 @@ fun InboxScreen(
                                         }
                                         ProcessDestination.PROJECT -> {
                                             itemToConvertToProject = item
+                                        }
+                                        ProcessDestination.REFERENCE -> {
+                                            viewModel.clearError()
+                                            itemToConvertToReference = item
+                                            coroutineScope.launch {
+                                                module.items.nextActions.getNextActionOptions().onSuccess { options ->
+                                                    nextActionOptions = options
+                                                }
+                                            }
                                         }
                                         else -> {
                                             // Pozostałe kategorie
@@ -326,6 +337,21 @@ fun InboxScreen(
                 ),
             ),
             onDismissRequest = { itemToConvertToProject = null },
+        )
+    }
+
+    itemToConvertToReference?.let { item ->
+        ReferenceTagsDialog(
+            isConversion = true,
+            availableTags = nextActionOptions.tags,
+            initialTags = item.tags,
+            isSaving = item.isPendingConfirmation,
+            errorMessageRes = uiState.errorMessageRes,
+            onDismiss = { itemToConvertToReference = null },
+            onSave = { tagIds, newTagNames ->
+                viewModel.convertToReference(item.itemId, tagIds, newTagNames, module.items.references)
+                itemToConvertToReference = null
+            },
         )
     }
 }
