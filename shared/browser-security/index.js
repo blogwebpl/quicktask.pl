@@ -49,6 +49,17 @@ exports.rememberUnlock = enabled => {
 exports.call = async (operation, text) => {
   const input = JSON.parse(text);
   switch (operation) {
+    case 'oauthTicket': {
+      const params = new URLSearchParams(location.hash.slice(1));
+      const ticket = params.get('oauth_ticket') || '';
+      if (ticket) history.replaceState(null, '', location.pathname + location.search);
+      return JSON.stringify({ ticket, error: location.pathname === '/auth/error' });
+    }
+    case 'oauthStart': {
+      if (input.provider !== 'google' && input.provider !== 'apple') throw new Error('Unknown OAuth provider');
+      location.assign('/auth/' + input.provider + '/start');
+      return '{}';
+    }
     case 'acquire': await acquire(); return '{}';
     case 'release': if (heldLock) { heldLock(); heldLock = null; } return '{}';
     case 'migrate':

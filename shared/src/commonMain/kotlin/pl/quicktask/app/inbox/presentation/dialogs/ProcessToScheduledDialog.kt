@@ -48,6 +48,7 @@ import pl.quicktask.app.nextactions.model.DecryptedProject
 import pl.quicktask.app.nextactions.model.NewContextInput
 import pl.quicktask.app.nextactions.model.NextActionOptions
 import pl.quicktask.app.ui.components.normalizeIsoDate
+import pl.quicktask.app.ui.components.isScheduledDateOrderValid
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.screen_scheduled
 import todo.shared.generated.resources.task_close_description
@@ -103,6 +104,8 @@ fun ProcessToScheduledDialog(
     LaunchedEffect(titleEditable) {
         if (titleEditable) focusRequester.requestFocus()
     }
+    val canSave = title.text.isNotBlank() && isScheduledDateOrderValid(scheduledAt, deferUntil, dueAt) &&
+        recurrenceState.isValid(scheduledAt)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -123,6 +126,7 @@ fun ProcessToScheduledDialog(
                     actions = {
                         Button(
                             onClick = {
+                                if (!canSave) return@Button
                                 onConfirm(
                                     title.text,
                                     note,
@@ -140,7 +144,7 @@ fun ProcessToScheduledDialog(
                                 )
                             },
                             modifier = Modifier.padding(end = 8.dp),
-                            enabled = title.text.isNotBlank() && scheduledAt.isNotBlank() && recurrenceState.isValid(scheduledAt)
+                            enabled = canSave
                         ) {
                             Text(stringResource(Res.string.task_save_button), style = MaterialTheme.typography.labelLarge)
                         }

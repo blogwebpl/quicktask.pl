@@ -2,6 +2,7 @@ package pl.quicktask.app
 
 import android.graphics.Color
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ProcessLifecycleOwner
 import pl.quicktask.app.auth.session.AppContext
+import pl.quicktask.app.auth.presentation.receiveOAuthDeepLink
 import pl.quicktask.app.sync.platform.SyncLifecycleObserver
 
 class MainActivity : ComponentActivity() {
@@ -29,6 +31,7 @@ class MainActivity : ComponentActivity() {
             ),
         )
         super.onCreate(savedInstanceState)
+        intent?.dataString?.let(::receiveOAuthDeepLink)
         AppContext.applicationContext = applicationContext
         updateGate = RequiredUpdateGate(this)
         splashScreen.setKeepOnScreenCondition { updateGate.checking }
@@ -42,6 +45,12 @@ class MainActivity : ComponentActivity() {
                 RequiredUpdateScreen(updateGate)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.dataString?.let(::receiveOAuthDeepLink)
     }
 
     override fun onResume() {

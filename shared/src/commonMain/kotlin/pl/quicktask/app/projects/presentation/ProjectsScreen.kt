@@ -96,14 +96,14 @@ fun ProjectsScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            if (uiState.isLoading && uiState.projects.isEmpty() && uiState.unassignedTasks.isEmpty()) {
+            if (uiState.isLoading && uiState.projects.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (uiState.projects.isEmpty() && uiState.unassignedTasks.isEmpty()) {
+            } else if (uiState.projects.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
@@ -147,21 +147,6 @@ fun ProjectsScreen(
                                 }
                             },
                         )
-                    }
-
-                    if (uiState.unassignedTasks.isNotEmpty()) {
-                        item(key = "unassigned_section") {
-                            UnassignedTasksSection(
-                                tasks = uiState.unassignedTasks,
-                                onDeleteTask = { itemId, gtdState ->
-                                    if (gtdState.uppercase() == "SCHEDULED") {
-                                        viewModel.deleteScheduledTask(itemId)
-                                    } else {
-                                        viewModel.deleteNextAction(itemId)
-                                    }
-                                },
-                            )
-                        }
                     }
                 }
             }

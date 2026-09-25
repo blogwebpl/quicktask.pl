@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +48,6 @@ import todo.shared.generated.resources.ic_hourglass_empty
 import todo.shared.generated.resources.ic_list
 import todo.shared.generated.resources.ic_play_arrow
 import todo.shared.generated.resources.project_tasks_count
-import todo.shared.generated.resources.unassigned_tasks
 import todo.shared.generated.resources.waiting_for_format
 
 @Composable
@@ -273,43 +271,4 @@ fun ProjectTaskListItem(
     }
 }
 
-@Composable
-fun UnassignedTasksSection(
-    tasks: List<DecryptedProjectTask>,
-    onDeleteTask: (itemId: String, gtdState: String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (tasks.isEmpty()) return
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Text(
-                text = stringResource(Res.string.unassigned_tasks),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                tasks.forEach { task ->
-                    ProjectTaskListItem(
-                        task = task,
-                        onDelete = { onDeleteTask(task.itemId, task.gtdState) },
-                    )
-                }
-            }
-        }
-    }
-}

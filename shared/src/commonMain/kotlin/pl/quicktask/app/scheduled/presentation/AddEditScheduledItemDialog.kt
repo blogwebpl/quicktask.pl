@@ -41,6 +41,7 @@ import pl.quicktask.app.nextactions.model.NewContextInput
 import pl.quicktask.app.nextactions.model.NextActionOptions
 import pl.quicktask.app.scheduled.model.ScheduledTask
 import pl.quicktask.app.ui.components.normalizeIsoDate
+import pl.quicktask.app.ui.components.isScheduledDateOrderValid
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -99,6 +100,8 @@ internal fun AddEditScheduledItemDialog(
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
+    val canSave = !isSubmitting && titleTextFieldValue.text.isNotBlank() &&
+        isScheduledDateOrderValid(scheduledAt, deferUntil, dueAt) && recurrenceState.isValid(scheduledAt)
 
     Dialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
@@ -108,9 +111,10 @@ internal fun AddEditScheduledItemDialog(
             topBar = {
                 TaskTopBar(
                     isEditing = itemToEdit != null,
-                    canSave = !isSubmitting && titleTextFieldValue.text.isNotBlank() && scheduledAt.isNotBlank() && recurrenceState.isValid(scheduledAt),
+                    canSave = canSave,
                     onDismiss = { if (!isSubmitting) onDismiss() },
                     onSave = {
+                        if (!canSave) return@TaskTopBar
                         onConfirm(
                             titleTextFieldValue.text,
                             note,

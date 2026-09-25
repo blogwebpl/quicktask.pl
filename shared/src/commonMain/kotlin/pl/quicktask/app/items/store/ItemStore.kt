@@ -15,6 +15,7 @@ import pl.quicktask.app.scheduled.model.ScheduledTask
 import pl.quicktask.app.trash.model.TrashItem
 import pl.quicktask.app.projects.model.DecryptedProjectTask
 import pl.quicktask.app.projects.model.ProjectsResult
+import pl.quicktask.app.somedaymaybe.model.SomedayMaybeItem
 
 /** Server snapshots and local overlays are updated together with a single atomic state. */
 enum class TrashOperationKind { Restore, PermanentDelete }
@@ -32,6 +33,7 @@ class ItemStore {
         val scheduledTasks: List<ScheduledTask> = emptyList(),
         val projects: List<pl.quicktask.app.projects.model.ProjectWithTasks> = emptyList(),
         val unassignedTasks: List<DecryptedProjectTask> = emptyList(),
+        val somedayMaybe: List<SomedayMaybeItem> = emptyList(),
         val trash: List<TrashItem> = emptyList(),
         val pending: Map<String, Change> = emptyMap(),
         val trashPending: Map<String, TrashOperation> = emptyMap(),
@@ -43,6 +45,7 @@ class ItemStore {
         val nextActionsValid: Boolean = false,
         val scheduledValid: Boolean = false,
         val projectsValid: Boolean = false,
+        val somedayMaybeValid: Boolean = false,
         val trashValid: Boolean = false,
     ) {
         fun visibleTrash(): List<TrashItem> = if (emptyTrash != null) emptyList()
@@ -87,6 +90,7 @@ class ItemStore {
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+            somedayMaybe = it.somedayMaybe.filterNot { old -> old.itemId == targetItemId },
         )
     }
     val itemsFlow: StateFlow<List<InboxItem>> = ProjectedStateFlow(state) { it.visibleInbox() }
@@ -97,6 +101,7 @@ class ItemStore {
     val projectsOverviewFlow: StateFlow<ProjectsResult> = ProjectedStateFlow(state) {
         ProjectsResult(it.projects, it.unassignedTasks)
     }
+    val somedayMaybeFlow: StateFlow<List<SomedayMaybeItem>> = ProjectedStateFlow(state) { it.somedayMaybe }
     val trashItemsFlow: StateFlow<List<TrashItem>> = ProjectedStateFlow(state) { it.visibleTrash() }
     val trashOperationsFlow: StateFlow<Map<String, TrashOperationKind>> = ProjectedStateFlow(state) {
         it.trashPending.mapValues { entry -> requireNotNull(entry.value.kind) }
@@ -134,11 +139,12 @@ class ItemStore {
     val isNextActionsCacheValid get() = state.value.nextActionsValid
     val isScheduledCacheValid get() = state.value.scheduledValid
     val isProjectsCacheValid get() = state.value.projectsValid
+    val isSomedayMaybeCacheValid get() = state.value.somedayMaybeValid
     val isTrashCacheValid get() = state.value.trashValid
     internal val generation get() = state.value.generation
 
     fun invalidateCache() = state.update {
-        it.copy(generation = it.generation + 1, inboxValid = false, nextActionsValid = false, scheduledValid = false, projectsValid = false, trashValid = false)
+        it.copy(generation = it.generation + 1, inboxValid = false, nextActionsValid = false, scheduledValid = false, projectsValid = false, somedayMaybeValid = false, trashValid = false)
     }
 
     internal fun cacheInbox(
@@ -179,6 +185,13 @@ class ItemStore {
             val before = state.value
             if (before.generation != expectedGeneration) return false
             if (state.compareAndSet(before, before.copy(projects = items, unassignedTasks = unassignedTasks, projectsValid = true))) return true
+        }
+    }
+    internal fun cacheSomedayMaybe(items: List<SomedayMaybeItem>, expectedGeneration: Long = generation): Boolean {
+        while (true) {
+            val before = state.value
+            if (before.generation != expectedGeneration) return false
+            if (state.compareAndSet(before, before.copy(somedayMaybe = items, somedayMaybeValid = true))) return true
         }
     }
     internal fun cacheTrash(items: List<TrashItem>, expectedGeneration: Long = generation): Boolean {
@@ -241,6 +254,7 @@ class ItemStore {
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+            somedayMaybe = it.somedayMaybe.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyNextAction(item: NextAction, targetItemId: String) = state.update {
@@ -257,6 +271,7 @@ class ItemStore {
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+            somedayMaybe = it.somedayMaybe.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyScheduledTask(item: ScheduledTask, targetItemId: String) = state.update {
@@ -273,6 +288,7 @@ class ItemStore {
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             trash = it.trash.filterNot { old -> old.itemId == targetItemId },
+            somedayMaybe = it.somedayMaybe.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyTrash(item: TrashItem, targetItemId: String) = state.update {
@@ -289,6 +305,7 @@ class ItemStore {
             inbox = it.inbox.filterNot { old -> old.itemId == targetItemId },
             nextActions = it.nextActions.filterNot { old -> old.itemId == targetItemId },
             scheduledTasks = it.scheduledTasks.filterNot { old -> old.itemId == targetItemId },
+            somedayMaybe = it.somedayMaybe.filterNot { old -> old.itemId == targetItemId },
         )
     }
     internal fun applyRemoval(itemId: String) = state.update {
@@ -298,6 +315,7 @@ class ItemStore {
             completed = it.completed.filterNot { item -> item.itemId == itemId },
             nextActions = it.nextActions.filterNot { item -> item.itemId == itemId },
             scheduledTasks = it.scheduledTasks.filterNot { item -> item.itemId == itemId },
+            somedayMaybe = it.somedayMaybe.filterNot { item -> item.itemId == itemId },
             trash = it.trash.filterNot { item -> item.itemId == itemId },
         )
     }

@@ -24,6 +24,29 @@ class AuthRepository internal constructor(
     private val dispatcher: CoroutineDispatcher,
 ) : AuthOperations, SessionRefresher {
 
+    override suspend fun oauthProviders(): OAuthProvidersDto = api.oauthProviders()
+
+    override suspend fun redeemOAuthTicket(ticket: String): Result<OAuthTicketResponseDto> = withContext(dispatcher) {
+        coroutineResult {
+            val result = api.redeemOAuthTicket(ticket)
+            if (result.linked) {
+                val token = result.accessToken?.takeIf { it.isNotBlank() } ?: error("OAuth session has no access token")
+                if (browserSessions) browserCall("email", "email" to result.email)
+                sessionManager.saveSession(token, result.refreshToken, result.email)
+            }
+            result
+        }
+    }
+
+    override suspend fun linkOAuthIdentity(ticket: String): Result<Unit> = withContext(dispatcher) {
+        coroutineResult {
+            val token = sessionManager.accessToken ?: error("No active session")
+            api.linkOAuthIdentity(ticket, token)
+        }
+    }
+
+    override suspend fun unlockOAuthKeys(password: String): Result<Unit> = unlockKeys(password)
+
     override val isLoggedIn: Boolean
         get() = sessionManager.isLoggedIn || (browserSessions && browserRememberedEmail().isNotBlank())
 

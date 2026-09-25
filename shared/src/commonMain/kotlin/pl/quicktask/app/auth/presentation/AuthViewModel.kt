@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import pl.quicktask.app.auth.data.AuthOperations
 import pl.quicktask.app.auth.model.ApiException
+import pl.quicktask.app.auth.model.OAuthProvidersDto
 import pl.quicktask.app.auth.session.browserSessions
 import pl.quicktask.app.common.AppLogger
 import pl.quicktask.app.common.AppLoggerManager
@@ -17,6 +18,7 @@ import pl.quicktask.app.common.LogLevel
 import pl.quicktask.app.common.NoOpAppLogger
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.error_user_keys_locked
+import todo.shared.generated.resources.error_authentication_failed
 import todo.shared.generated.resources.password_min_length
 
 data class AuthUiState(
@@ -26,12 +28,15 @@ data class AuthUiState(
     val errorMessage: String? = null,
     val isLoggedIn: Boolean = false,
     val registrationId: String? = null,
+    val oauthEmail: String? = null,
+    val oauthNeedsUnlock: Boolean = false,
 )
 
 class AuthViewModel(
     private val repository: AuthOperations,
     private val logger: AppLogger = NoOpAppLogger,
 ) : ViewModel() {
+    private var pendingOAuthLinkTicket: String? = null
 
     private val _uiState = MutableStateFlow(
         AuthUiState(
@@ -41,8 +46,14 @@ class AuthViewModel(
         ),
     )
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+    private val _oauthProviders = MutableStateFlow(OAuthProvidersDto())
+    val oauthProviders: StateFlow<OAuthProvidersDto> = _oauthProviders.asStateFlow()
 
     init {
+        if (oauthPlatform != "desktop") viewModelScope.launch {
+            try { _oauthProviders.value = repository.oauthProviders() }
+            catch (_: Exception) { /* Password login remains available if provider discovery fails. */ }
+        }
         if (repository.isLoggedIn) {
             viewModelScope.launch {
                 AppLoggerManager.logRefresh("AuthViewModel", "Sprawdzanie przywracania zbuforowanych kluczy")
@@ -73,6 +84,10 @@ class AuthViewModel(
         viewModelScope.launch {
             val result = repository.login(email, password)
             result.onSuccess {
+                pendingOAuthLinkTicket?.let { ticket ->
+                    repository.linkOAuthIdentity(ticket)
+                    pendingOAuthLinkTicket = null
+                }
                 AppLoggerManager.logStateChange("AuthViewModel", "Logowanie zakończone sukcesem")
                 _uiState.update { AuthUiState(isLoggedIn = true) }
             }.onFailure { error ->
@@ -87,6 +102,37 @@ class AuthViewModel(
                 }
             }
         }
+    }
+
+    fun completeOAuthCallback(ticket: String) {
+        if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, errorMessageRes = null) }
+        viewModelScope.launch {
+            repository.redeemOAuthTicket(ticket).onSuccess { result ->
+                pendingOAuthLinkTicket = result.linkTicket
+                _uiState.update { it.copy(isLoading = false, oauthEmail = result.email,
+                    oauthNeedsUnlock = result.linked) }
+            }.onFailure {
+                _uiState.update { it.copy(isLoading = false, errorMessageRes = Res.string.error_authentication_failed) }
+            }
+        }
+    }
+
+    fun unlockOAuthKeys(password: String) {
+        if (_uiState.value.isLoading || !_uiState.value.oauthNeedsUnlock) return
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, errorMessageRes = null) }
+        viewModelScope.launch {
+            repository.unlockOAuthKeys(password).onSuccess {
+                _uiState.update { AuthUiState(isLoggedIn = true) }
+            }.onFailure { error ->
+                val (res, message) = mapAuthErrorToState(error)
+                _uiState.update { it.copy(isLoading = false, errorMessageRes = res, errorMessage = message) }
+            }
+        }
+    }
+
+    fun oauthFailed() {
+        _uiState.update { it.copy(errorMessageRes = Res.string.error_authentication_failed, errorMessage = null) }
     }
 
     fun register(email: String, password: String) {
@@ -122,6 +168,10 @@ class AuthViewModel(
         _uiState.update { it.copy(isLoading = true, errorMessage = null, errorMessageRes = null) }
         viewModelScope.launch {
             repository.verifyRegistration(id, code, email, password).onSuccess {
+                pendingOAuthLinkTicket?.let { ticket ->
+                    repository.linkOAuthIdentity(ticket)
+                    pendingOAuthLinkTicket = null
+                }
                 AppLoggerManager.logStateChange("AuthViewModel", "Konto utworzone i użytkownik zalogowany")
                 _uiState.update { AuthUiState(isLoggedIn = true) }
             }.onFailure { error ->
@@ -138,6 +188,7 @@ class AuthViewModel(
     }
 
     fun logout() {
+        pendingOAuthLinkTicket = null
         AppLoggerManager.logFunction("AuthViewModel", "logout")
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {

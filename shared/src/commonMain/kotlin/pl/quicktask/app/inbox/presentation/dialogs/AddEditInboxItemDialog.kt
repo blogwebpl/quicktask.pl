@@ -71,7 +71,6 @@ import todo.shared.generated.resources.task_close_description
 import todo.shared.generated.resources.task_edit_title
 import todo.shared.generated.resources.task_new_title
 import todo.shared.generated.resources.task_note_label
-import todo.shared.generated.resources.task_optional_label
 import todo.shared.generated.resources.task_save_button
 import todo.shared.generated.resources.task_title_placeholder
 import todo.shared.generated.resources.task_title_prompt

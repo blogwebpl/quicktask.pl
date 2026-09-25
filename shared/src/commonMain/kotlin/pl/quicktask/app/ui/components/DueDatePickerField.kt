@@ -1,7 +1,6 @@
 package pl.quicktask.app.ui.components
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,14 +35,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.ktor.util.date.GMTDate
 import io.ktor.util.date.getTimeMillis
+import kotlin.time.Instant
 
 import org.jetbrains.compose.resources.stringResource
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.action_clear
 import todo.shared.generated.resources.action_select
 import todo.shared.generated.resources.date_calendar
+import todo.shared.generated.resources.date_day_after_tomorrow
 import todo.shared.generated.resources.date_next_week
-import todo.shared.generated.resources.date_today
 import todo.shared.generated.resources.date_tomorrow
 import todo.shared.generated.resources.due_date_optional
 import todo.shared.generated.resources.open_calendar
@@ -58,6 +59,7 @@ fun formatIsoDate(timestamp: Long): String {
 
 fun todayIso(): String = formatIsoDate(getTimeMillis())
 fun tomorrowIso(): String = formatIsoDate(getTimeMillis() + 86_400_000L)
+fun dayAfterTomorrowIso(): String = formatIsoDate(getTimeMillis() + 2 * 86_400_000L)
 fun nextWeekIso(): String = formatIsoDate(getTimeMillis() + 7 * 86_400_000L)
 
 fun normalizeIsoDate(input: String): String? {
@@ -70,20 +72,18 @@ fun normalizeIsoDate(input: String): String? {
     return "${trimmed}T12:00:00.000Z"
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DueDatePickerField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    minDate: String? = null,
+    maxDate: String? = null,
+    enabled: Boolean = true,
 ) {
     var showDatePickerDialog by remember { mutableStateOf(false) }
     val datePart = if (value.contains('T')) value.substringBefore('T') else value
-
-    val isToday = datePart.isNotEmpty() && datePart == todayIso()
-    val isTomorrow = datePart.isNotEmpty() && datePart == tomorrowIso()
-    val isNextWeek = datePart.isNotEmpty() && datePart == nextWeekIso()
-    val isCustomDate = datePart.isNotEmpty() && !isToday && !isTomorrow && !isNextWeek
 
     Column(modifier = modifier) {
         Text(
@@ -93,75 +93,15 @@ fun DueDatePickerField(
         )
         Spacer(modifier = Modifier.height(6.dp))
 
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            SegmentedButton(
-                selected = isToday,
-                onClick = {
-                    if (isToday) onValueChange("") else onValueChange(todayIso())
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 4),
-                icon = {},
-                label = {
-                    Text(
-                        text = stringResource(Res.string.date_today),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-
-            SegmentedButton(
-                selected = isTomorrow,
-                onClick = {
-                    if (isTomorrow) onValueChange("") else onValueChange(tomorrowIso())
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 4),
-                icon = {},
-                label = {
-                    Text(
-                        text = stringResource(Res.string.date_tomorrow),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-
-            SegmentedButton(
-                selected = isNextWeek,
-                onClick = {
-                    if (isNextWeek) onValueChange("") else onValueChange(nextWeekIso())
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 4),
-                icon = {},
-                label = {
-                    Text(
-                        text = stringResource(Res.string.date_next_week),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-
-            SegmentedButton(
-                selected = isCustomDate || showDatePickerDialog,
-                onClick = { showDatePickerDialog = true },
-                shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4),
-                icon = {},
-                label = {
-                    Text(
-                        text = stringResource(Res.string.date_calendar),
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-            )
-        }
+        DateShortcutButtons(
+            value = datePart,
+            onValueChange = onValueChange,
+            minDate = minDate,
+            maxDate = maxDate,
+            enabled = enabled,
+            showDatePickerDialog = showDatePickerDialog,
+            onShowDatePickerDialogChange = { showDatePickerDialog = it },
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -169,6 +109,9 @@ fun DueDatePickerField(
             value = datePart,
             onValueChange = onValueChange,
             allowClear = true,
+            minDate = minDate,
+            maxDate = maxDate,
+            enabled = enabled,
             showDatePickerDialog = showDatePickerDialog,
             onShowDatePickerDialogChange = { showDatePickerDialog = it },
         )
@@ -184,6 +127,8 @@ fun LabeledDatePickerField(
     modifier: Modifier = Modifier,
     allowClear: Boolean = true,
     enabled: Boolean = true,
+    minDate: String? = null,
+    maxDate: String? = null,
 ) {
     var showDatePickerDialog by remember { mutableStateOf(false) }
 
@@ -194,13 +139,87 @@ fun LabeledDatePickerField(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(6.dp))
+        DateShortcutButtons(
+            value = value.substringBefore('T'),
+            onValueChange = onValueChange,
+            allowClear = allowClear,
+            enabled = enabled,
+            minDate = minDate,
+            maxDate = maxDate,
+            showDatePickerDialog = showDatePickerDialog,
+            onShowDatePickerDialogChange = { showDatePickerDialog = it },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         CalendarTextField(
             value = value.substringBefore('T'),
             onValueChange = onValueChange,
             allowClear = allowClear,
             enabled = enabled,
+            minDate = minDate,
+            maxDate = maxDate,
             showDatePickerDialog = showDatePickerDialog,
             onShowDatePickerDialogChange = { showDatePickerDialog = it },
+        )
+    }
+}
+
+@Composable
+private fun DateShortcutButtons(
+    value: String,
+    onValueChange: (String) -> Unit,
+    showDatePickerDialog: Boolean,
+    onShowDatePickerDialogChange: (Boolean) -> Unit,
+    allowClear: Boolean = true,
+    enabled: Boolean = true,
+    minDate: String? = null,
+    maxDate: String? = null,
+) {
+    val dates = listOf(tomorrowIso(), dayAfterTomorrowIso(), nextWeekIso())
+    val labels = listOf(
+        stringResource(Res.string.date_tomorrow),
+        stringResource(Res.string.date_day_after_tomorrow),
+        stringResource(Res.string.date_next_week),
+    )
+
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        dates.forEachIndexed { index, date ->
+            val selected = value.isNotEmpty() && value == date
+            SegmentedButton(
+                selected = selected,
+                enabled = enabled && (selected && allowClear || isTaskDateInRange(date, minDate, maxDate)),
+                onClick = {
+                    if (enabled) {
+                        if (selected && allowClear) onValueChange("")
+                        else if (isTaskDateInRange(date, minDate, maxDate)) onValueChange(date)
+                    }
+                },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = 4),
+                icon = {},
+                label = {
+                    Text(
+                        text = labels[index],
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+            )
+        }
+
+        SegmentedButton(
+            selected = (value.isNotEmpty() && value !in dates) || showDatePickerDialog,
+            enabled = enabled,
+            onClick = { onShowDatePickerDialogChange(true) },
+            shape = SegmentedButtonDefaults.itemShape(index = 3, count = 4),
+            icon = {},
+            label = {
+                Text(
+                    text = stringResource(Res.string.date_calendar),
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
         )
     }
 }
@@ -212,6 +231,8 @@ private fun CalendarTextField(
     onValueChange: (String) -> Unit,
     allowClear: Boolean,
     enabled: Boolean = true,
+    minDate: String? = null,
+    maxDate: String? = null,
     showDatePickerDialog: Boolean,
     onShowDatePickerDialogChange: (Boolean) -> Unit,
 ) {
@@ -249,14 +270,32 @@ private fun CalendarTextField(
     )
 
     if (showDatePickerDialog && enabled) {
-        val datePickerState = rememberDatePickerState()
+        val selectableDates = remember(minDate, maxDate) {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    isTaskDateInRange(formatIsoDate(utcTimeMillis), minDate, maxDate)
+            }
+        }
+        val initialDate = remember(value) {
+            taskDatePart(value)?.let { date ->
+                runCatching { Instant.parse("${date}T00:00:00Z").toEpochMilliseconds() }.getOrNull()
+            }
+        }
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialDate,
+            selectableDates = selectableDates,
+        )
         DatePickerDialog(
             onDismissRequest = ::closeDatePicker,
             confirmButton = {
                 TextButton(
+                    enabled = datePickerState.selectedDateMillis?.let {
+                        isTaskDateInRange(formatIsoDate(it), minDate, maxDate)
+                    } == true,
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            onValueChange(formatIsoDate(millis))
+                            val date = formatIsoDate(millis)
+                            if (isTaskDateInRange(date, minDate, maxDate)) onValueChange(date)
                         }
                         closeDatePicker()
                     },

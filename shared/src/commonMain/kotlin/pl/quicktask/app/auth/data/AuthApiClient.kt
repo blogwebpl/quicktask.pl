@@ -28,6 +28,27 @@ internal class AuthApiClient(
     suspend fun startRegistration(request: StartRegistrationRequestDto): StartRegistrationResponseDto =
         post("auth/register/start", request)
 
+    suspend fun oauthProviders(): OAuthProvidersDto {
+        val response = httpClient.get("$baseUrl/auth/oauth/providers")
+        response.ensureSuccessOrThrow()
+        return response.body()
+    }
+
+    suspend fun redeemOAuthTicket(ticket: String): OAuthTicketResponseDto =
+        post(if (browserSessions) "auth/browser/oauth/redeem" else "auth/oauth/redeem", OAuthTicketRequestDto(ticket))
+
+    suspend fun linkOAuthIdentity(ticket: String, accessToken: String) {
+        val url = "$baseUrl/auth/oauth/link"
+        val response = httpClient.post(url) {
+            if (browserSessions) header("X-Clearmind-CSRF", "1")
+            header("Authorization", "DPoP $accessToken")
+            header("DPoP", dPoPManager.generateDPoPProof("POST", url, accessToken))
+            contentType(ContentType.Application.Json)
+            setBody(OAuthLinkRequestDto(ticket))
+        }
+        response.ensureSuccessOrThrow()
+    }
+
     suspend fun finishRegistration(request: FinishRegistrationRequestDto): FinishRegistrationResponseDto =
         post("auth/register/finish", request)
 

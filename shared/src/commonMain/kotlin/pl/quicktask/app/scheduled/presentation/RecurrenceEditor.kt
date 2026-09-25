@@ -123,7 +123,7 @@ internal fun RecurrenceEditor(state: RecurrenceEditorState, onChange: (Recurrenc
                         }
                     }
                 }
-                LabeledDatePickerField(value = state.until, onValueChange = { if (enabled) onChange(state.copy(until = it, originalUntil = null)) }, label = stringResource(Res.string.recurrence_until), enabled = enabled)
+                LabeledDatePickerField(value = state.until, onValueChange = { if (enabled) onChange(state.copy(until = it, originalUntil = null)) }, label = stringResource(Res.string.recurrence_until), enabled = enabled, minDate = scheduledAt)
                 if (state.until.isBlank()) Text(stringResource(Res.string.recurrence_no_end), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (!state.copy(interval = "1").isValid(scheduledAt)) Text(stringResource(Res.string.recurrence_end_error), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }

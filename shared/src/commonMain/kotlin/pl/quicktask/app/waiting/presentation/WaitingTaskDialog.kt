@@ -40,6 +40,8 @@ import pl.quicktask.app.ui.components.LabeledDatePickerField
 import pl.quicktask.app.ui.components.ProjectFieldSection
 import pl.quicktask.app.ui.components.ProjectSelectionBottomSheet
 import pl.quicktask.app.ui.components.normalizeIsoDate
+import pl.quicktask.app.ui.components.isFollowUpDateOrderValid
+import pl.quicktask.app.ui.components.taskDatePart
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.follow_up_at_label
 import todo.shared.generated.resources.screen_waiting
@@ -98,7 +100,8 @@ fun WaitingTaskDialog(
         val ids = options.projects.map { it.projectId }.toSet()
         options.projects + extraProjects.filter { it.projectId !in ids }
     }
-    val canSave = currentTitle.isNotBlank() && (waitingFor.isNotBlank() || selectedContact != null) && !isSubmitting && !delegating
+    val canSave = currentTitle.isNotBlank() && (waitingFor.isNotBlank() || selectedContact != null) &&
+        isFollowUpDateOrderValid(followUpAt, dueAt) && !isSubmitting && !delegating
 
     Dialog(
         onDismissRequest = { if (!delegating && !isSubmitting) onDismiss() },
@@ -117,6 +120,7 @@ fun WaitingTaskDialog(
                         Button(
                             enabled = canSave,
                             onClick = {
+                                if (!canSave) return@Button
                                 val contact = selectedContact
                                 if (contact != null && contactsRepository != null) {
                                     scope.launch {
@@ -215,9 +219,13 @@ fun WaitingTaskDialog(
                     value = followUpAt,
                     onValueChange = { followUpAt = it },
                     label = stringResource(Res.string.follow_up_at_label),
+                    maxDate = dueAt,
                 )
 
-                DueDatePickerField(value = dueAt, onValueChange = { dueAt = it })
+                DueDatePickerField(value = dueAt, onValueChange = { dueAt = it }, minDate = followUpAt)
+                if (taskDatePart(dueAt) != null && taskDatePart(followUpAt) != null && dueAt < followUpAt) {
+                    Text(stringResource(Res.string.date_follow_up_after_due_error), color = MaterialTheme.colorScheme.error)
+                }
                 Spacer(Modifier.padding(bottom = 8.dp))
             }
         }

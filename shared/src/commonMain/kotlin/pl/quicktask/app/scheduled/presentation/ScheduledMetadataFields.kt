@@ -50,8 +50,12 @@ import pl.quicktask.app.ui.components.ProjectFieldSection
 import pl.quicktask.app.ui.components.ProjectSelectionBottomSheet
 import pl.quicktask.app.ui.components.TagFieldSection
 import pl.quicktask.app.ui.components.TagSelectionBottomSheet
+import pl.quicktask.app.ui.components.taskDatePart
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.defer_until_label
+import todo.shared.generated.resources.date_defer_after_due_error
+import todo.shared.generated.resources.date_defer_after_scheduled_error
+import todo.shared.generated.resources.date_due_before_scheduled_error
 import todo.shared.generated.resources.ic_attach_file
 import todo.shared.generated.resources.scheduled_at_label
 import todo.shared.generated.resources.task_add_attachment
@@ -183,6 +187,9 @@ internal fun ScheduledMetadataFields(
     var showProjectPicker by remember { mutableStateOf(false) }
     var showContextPicker by remember { mutableStateOf(false) }
     var showTagPicker by remember { mutableStateOf(false) }
+    val scheduledDate = taskDatePart(scheduledAt)
+    val deferredDate = taskDatePart(deferUntil)
+    val dueDate = taskDatePart(dueAt)
 
     ScheduledEditorSection {
         LabeledDatePickerField(
@@ -190,16 +197,32 @@ internal fun ScheduledMetadataFields(
             onValueChange = { if (enabled) onScheduledAtChange(it) },
             label = stringResource(Res.string.scheduled_at_label) + " *",
             allowClear = false,
-        )
-        LabeledDatePickerField(
-            value = deferUntil,
-            onValueChange = { if (enabled) onDeferUntilChange(it) },
-            label = stringResource(Res.string.defer_until_label),
+            enabled = enabled,
+            minDate = deferredDate,
+            maxDate = dueDate,
         )
         DueDatePickerField(
             value = dueAt,
             onValueChange = { if (enabled) onDueAtChange(it) },
+            enabled = enabled,
+            minDate = listOfNotNull(scheduledDate, deferredDate).maxOrNull(),
         )
+        if (scheduledDate != null && dueDate != null && dueDate < scheduledDate) {
+            Text(stringResource(Res.string.date_due_before_scheduled_error), color = MaterialTheme.colorScheme.error)
+        }
+        LabeledDatePickerField(
+            value = deferUntil,
+            onValueChange = { if (enabled) onDeferUntilChange(it) },
+            label = stringResource(Res.string.defer_until_label),
+            enabled = enabled,
+            maxDate = listOfNotNull(scheduledDate, dueDate).minOrNull(),
+        )
+        if (deferredDate != null && scheduledDate != null && deferredDate > scheduledDate) {
+            Text(stringResource(Res.string.date_defer_after_scheduled_error), color = MaterialTheme.colorScheme.error)
+        }
+        if (deferredDate != null && dueDate != null && deferredDate > dueDate) {
+            Text(stringResource(Res.string.date_defer_after_due_error), color = MaterialTheme.colorScheme.error)
+        }
     }
 
     RecurrenceEditor(

@@ -76,3 +76,21 @@ class ApiException(
     override val message: String?,
 ) : Exception(message ?: "HTTP $statusCode (${code ?: "no_code"})")
 
+@Serializable
+data class OAuthProvidersDto(val google: Boolean = false, val apple: Boolean = false)
+
+@Serializable
+data class OAuthTicketRequestDto(val ticket: String)
+
+@Serializable
+data class OAuthTicketResponseDto(
+    val email: String,
+    val linked: Boolean = false,
+    val linkTicket: String? = null,
+    val accessToken: String? = null,
+    val refreshToken: String = "",
+)
+
+@Serializable
+data class OAuthLinkRequestDto(val ticket: String)
+

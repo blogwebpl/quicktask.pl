@@ -28,19 +28,55 @@ fun MainLayout(
     val inboxItems by module.items.store.itemsFlow.collectAsStateWithLifecycle(emptyList())
     val trashItems by module.items.store.trashItemsFlow.collectAsStateWithLifecycle(emptyList())
     val projects by module.items.store.projectsFlow.collectAsStateWithLifecycle(emptyList())
+    val nextActions by module.items.store.nextActionsFlow.collectAsStateWithLifecycle(emptyList())
+    val scheduledTasks by module.items.store.scheduledTasksFlow.collectAsStateWithLifecycle(emptyList())
+    val completedItems by module.items.store.completedItemsFlow.collectAsStateWithLifecycle(emptyList())
+    val projectsOverview by module.items.store.projectsOverviewFlow.collectAsStateWithLifecycle(
+        pl.quicktask.app.projects.model.ProjectsResult(emptyList(), emptyList())
+    )
+
+    var nowCount by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(module) {
         module.items.inbox.getItems()
         module.items.trash.getTrashItems()
         module.items.projects.getProjects()
+        module.items.nextActions.getNextActions()
+        module.items.scheduled.getScheduledTasks()
+        module.items.completed.getCompletedInTwoMinutes()
+        module.items.now.getNowData().onSuccess { data ->
+            nowCount = data.availableNextActions.size + data.scheduledToday.size + data.overdue.size + data.waitingForReview.size
+        }
     }
 
-    val itemCounts = remember(inboxItems, trashItems, projects) {
+    val itemCounts = remember(
+        inboxItems, trashItems, projects, nextActions, scheduledTasks, completedItems, projectsOverview, nowCount
+    ) {
+        val assignedTasks = projectsOverview.projects.flatMap { it.tasks }
+        val unassignedTasks = projectsOverview.unassignedTasks
+        val allProjectTasks = assignedTasks + unassignedTasks
+
+        val waitingCount = allProjectTasks.count { it.gtdState.equals("WAITING", ignoreCase = true) }
+        val somedayCount = allProjectTasks.count { it.gtdState.equals("SOMEDAY", ignoreCase = true) }
+        val referenceCount = allProjectTasks.count { it.gtdState.equals("REFERENCE", ignoreCase = true) }
+        val reviewCount = allProjectTasks.count { it.gtdState.equals("REVIEW", ignoreCase = true) }
+
         mapOf(
             Screen.INBOX to inboxItems.size,
             Screen.TRASH to trashItems.size,
             Screen.PROJECTS to projects.size,
-        )
+            Screen.NEXT_ACTIONS to nextActions.size,
+            Screen.SCHEDULED to scheduledTasks.size,
+            Screen.COMPLETED to completedItems.size,
+            Screen.WAITING to waitingCount,
+            Screen.SOMEDAY to somedayCount,
+            Screen.REFERENCE to referenceCount,
+            Screen.REVIEW to reviewCount,
+        ).toMutableMap().apply {
+            if (nowCount != null) {
+                put(Screen.NOW, nowCount!!)
+            }
+        }
     }
 
     BackHandler(enabled = drawerState.isOpen) {

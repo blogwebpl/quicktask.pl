@@ -152,7 +152,7 @@ class InboxViewModel(
             runPendingItemMutation(
                 store, operation,
                 mutate = { lifecycle.deleteItem(itemId) },
-                refresh = { repository.getItems() },
+                refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_delete_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
             )
@@ -171,7 +171,7 @@ class InboxViewModel(
             runPendingItemMutation(
                 store, operation,
                 mutate = { projectsOperations.convertFromInbox(itemId) },
-                refresh = { repository.getItems() },
+                refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
             )
@@ -208,7 +208,7 @@ class InboxViewModel(
                         newTagNames = newTagNames,
                     )
                 },
-                refresh = { repository.getItems() },
+                refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
             )
@@ -239,7 +239,7 @@ class InboxViewModel(
                         followUpAt = followUpAt,
                     )
                 },
-                refresh = { repository.getItems() },
+                refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
             )
@@ -289,7 +289,7 @@ class InboxViewModel(
                         removedAttachmentIds = removedAttachmentIds,
                     )
                 },
-                refresh = { repository.getItems() },
+                refresh = { repository.getItems(completedOperation = operation) },
                 onMutationError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_save_item)) } },
                 onRefreshError = { error -> updateState { it.copy(errorMessageRes = itemErrorResource(error, Res.string.error_fetch_items)) } },
             )

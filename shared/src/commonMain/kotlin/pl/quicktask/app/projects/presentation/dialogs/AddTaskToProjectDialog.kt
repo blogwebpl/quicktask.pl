@@ -48,8 +48,12 @@ import pl.quicktask.app.projects.model.ProjectWithTasks
 import pl.quicktask.app.scheduled.model.RecurrenceRule
 import pl.quicktask.app.ui.components.ContextSelectionBottomSheet
 import pl.quicktask.app.ui.components.DueDatePickerField
+import pl.quicktask.app.ui.components.LabeledDatePickerField
 import pl.quicktask.app.ui.components.TagSelectionBottomSheet
 import pl.quicktask.app.ui.components.normalizeIsoDate
+import pl.quicktask.app.ui.components.isFollowUpDateOrderValid
+import pl.quicktask.app.ui.components.isScheduledDateOrderValid
+import pl.quicktask.app.ui.components.taskDatePart
 import todo.shared.generated.resources.Res
 import todo.shared.generated.resources.action_add
 import todo.shared.generated.resources.action_close
@@ -57,6 +61,9 @@ import todo.shared.generated.resources.gtd_state_next
 import todo.shared.generated.resources.gtd_state_scheduled
 import todo.shared.generated.resources.gtd_state_waiting
 import todo.shared.generated.resources.project_task_type_label
+import todo.shared.generated.resources.scheduled_at_label
+import todo.shared.generated.resources.date_due_before_scheduled_error
+import todo.shared.generated.resources.date_follow_up_after_due_error
 import todo.shared.generated.resources.task_note_placeholder
 import todo.shared.generated.resources.task_save_button
 import todo.shared.generated.resources.waiting_for_label
@@ -111,8 +118,8 @@ fun AddTaskToProjectDialog(
 
     val isFormValid = when (taskType) {
         ProjectTaskType.NEXT_ACTION -> title.isNotBlank()
-        ProjectTaskType.WAITING -> title.isNotBlank() && waitingFor.isNotBlank()
-        ProjectTaskType.SCHEDULED -> title.isNotBlank() && scheduledAt.isNotBlank()
+        ProjectTaskType.WAITING -> title.isNotBlank() && waitingFor.isNotBlank() && isFollowUpDateOrderValid(followUpAt, dueAt)
+        ProjectTaskType.SCHEDULED -> title.isNotBlank() && isScheduledDateOrderValid(scheduledAt, deferUntil, dueAt)
     }
 
     ModalBottomSheet(
@@ -255,6 +262,38 @@ fun AddTaskToProjectDialog(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (taskType == ProjectTaskType.SCHEDULED) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LabeledDatePickerField(
+                    value = scheduledAt,
+                    onValueChange = { scheduledAt = it },
+                    label = stringResource(Res.string.scheduled_at_label) + " *",
+                    allowClear = false,
+                    maxDate = dueAt,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DueDatePickerField(
+                value = dueAt,
+                onValueChange = { dueAt = it },
+                minDate = when (taskType) {
+                    ProjectTaskType.SCHEDULED -> scheduledAt
+                    ProjectTaskType.WAITING -> followUpAt
+                    ProjectTaskType.NEXT_ACTION -> null
+                },
+            )
+            if (taskType == ProjectTaskType.SCHEDULED && taskDatePart(dueAt) != null &&
+                taskDatePart(scheduledAt) != null && dueAt < scheduledAt) {
+                Text(stringResource(Res.string.date_due_before_scheduled_error), color = MaterialTheme.colorScheme.error)
+            }
+            if (taskType == ProjectTaskType.WAITING && taskDatePart(dueAt) != null &&
+                taskDatePart(followUpAt) != null && dueAt < followUpAt) {
+                Text(stringResource(Res.string.date_follow_up_after_due_error), color = MaterialTheme.colorScheme.error)
+            }
+
             if (taskType == ProjectTaskType.WAITING) {
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -276,25 +315,9 @@ fun AddTaskToProjectDialog(
                 DueDatePickerField(
                     value = followUpAt,
                     onValueChange = { followUpAt = it },
+                    maxDate = dueAt,
                 )
             }
-
-            if (taskType == ProjectTaskType.SCHEDULED) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                DueDatePickerField(
-                    value = scheduledAt,
-                    onValueChange = { scheduledAt = it },
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Due At Date
-            DueDatePickerField(
-                value = dueAt,
-                onValueChange = { dueAt = it },
-            )
 
             Spacer(modifier = Modifier.height(24.dp))
         }

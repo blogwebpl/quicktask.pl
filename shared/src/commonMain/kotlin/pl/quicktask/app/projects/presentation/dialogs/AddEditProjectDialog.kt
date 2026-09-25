@@ -43,7 +43,6 @@ import todo.shared.generated.resources.action_add_project
 import todo.shared.generated.resources.action_close
 import todo.shared.generated.resources.task_note_label
 import todo.shared.generated.resources.task_note_placeholder
-import todo.shared.generated.resources.task_optional_label
 import todo.shared.generated.resources.task_save_button
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,11 +144,6 @@ fun AddEditProjectDialog(
                     text = stringResource(Res.string.task_note_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = " (${stringResource(Res.string.task_optional_label)})",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
             }
 
