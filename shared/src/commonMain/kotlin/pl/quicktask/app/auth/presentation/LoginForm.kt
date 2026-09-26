@@ -31,11 +31,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -54,6 +54,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import pl.quicktask.app.auth.model.OAuthProvidersDto
 import pl.quicktask.app.auth.session.browserSessions
@@ -70,7 +71,8 @@ import todo.shared.generated.resources.auth_verification_subtitle
 import todo.shared.generated.resources.auth_verification_title
 import todo.shared.generated.resources.auth_verified_email
 import todo.shared.generated.resources.email
-import todo.shared.generated.resources.email_invalid
+import todo.shared.generated.resources.ic_visibility
+import todo.shared.generated.resources.ic_visibility_off
 import todo.shared.generated.resources.login_switch
 import todo.shared.generated.resources.password
 import todo.shared.generated.resources.password_min_length
@@ -102,7 +104,8 @@ private fun LoginFormContent(
 ) {
     val emailFocusRequester = remember { FocusRequester() }
     val passwordFocusRequester = remember { FocusRequester() }
-    val welcomeBackTitle = remember(form) { form.showWelcomeBack }
+    val passwordTransformation = remember { PasswordVisualTransformation() }
+    val submitKeyboardActions = KeyboardActions(onDone = { submitLoginForm(viewModel, uiState, form) })
 
     LaunchedEffect(form.email.isBlank(), form.registering, uiState.registrationId,
         uiState.oauthNeedsUnlock, uiState.isLoading, uiState.oauthEmail) {
@@ -194,7 +197,7 @@ private fun LoginFormContent(
                             uiState.registrationId != null -> Res.string.auth_verification_title
                             uiState.oauthNeedsUnlock -> Res.string.auth_unlock_title
                             form.registering -> Res.string.auth_register_title
-                            welcomeBackTitle -> Res.string.auth_login_title
+                            form.showWelcomeBack -> Res.string.auth_login_title
                             else -> Res.string.auth_login_first_title
                         }),
                         style = MaterialTheme.typography.headlineMedium,
@@ -227,11 +230,7 @@ private fun LoginFormContent(
                             enabled = !uiState.isLoading,
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                if (form.verificationCode.isNotBlank() && !uiState.isLoading) {
-                                    submitLoginForm(viewModel, uiState, form)
-                                }
-                            }),
+                            keyboardActions = submitKeyboardActions,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.medium,
                         )
@@ -244,9 +243,6 @@ private fun LoginFormContent(
                             label = { Text(stringResource(Res.string.email)) },
                             enabled = !uiState.isLoading && !uiState.oauthNeedsUnlock,
                             isError = showEmailError,
-                            supportingText = if (showEmailError) {
-                                { Text(stringResource(Res.string.email_invalid)) }
-                            } else null,
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
@@ -261,10 +257,20 @@ private fun LoginFormContent(
                             value = form.password,
                             onValueChange = { form.password = it },
                             label = { Text(stringResource(Res.string.password)) },
-                            visualTransformation = if (form.passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (form.passwordVisible) VisualTransformation.None else passwordTransformation,
                             trailingIcon = {
-                                TextButton(onClick = { form.passwordVisible = !form.passwordVisible }) {
-                                    Text(stringResource(if (form.passwordVisible) Res.string.auth_hide_password else Res.string.auth_show_password))
+                                IconButton(
+                                    onClick = { form.passwordVisible = !form.passwordVisible },
+                                    enabled = !uiState.isLoading,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (form.passwordVisible) Res.drawable.ic_visibility_off else Res.drawable.ic_visibility,
+                                        ),
+                                        contentDescription = stringResource(
+                                            if (form.passwordVisible) Res.string.auth_hide_password else Res.string.auth_show_password,
+                                        ),
+                                    )
                                 }
                             },
                             enabled = !uiState.isLoading,
@@ -273,11 +279,7 @@ private fun LoginFormContent(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done,
                             ),
-                            keyboardActions = KeyboardActions(onDone = {
-                                if (!uiState.isLoading && canSubmitLoginForm(uiState, form)) {
-                                    submitLoginForm(viewModel, uiState, form)
-                                }
-                            }),
+                            keyboardActions = submitKeyboardActions,
                             modifier = Modifier.fillMaxWidth().focusRequester(passwordFocusRequester),
                             shape = MaterialTheme.shapes.medium,
                         )
@@ -338,7 +340,7 @@ private fun AuthModeSelector(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .height(AuthActionHeight)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (selected) MaterialTheme.colorScheme.surfaceContainerLowest else MaterialTheme.colorScheme.surfaceContainer)
                     .selectable(

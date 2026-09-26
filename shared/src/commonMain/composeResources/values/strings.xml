@@ -3,7 +3,6 @@
 
     <!-- Auth -->
     <string name="email">Email address</string>
-    <string name="email_invalid">Enter a valid email address.</string>
     <string name="password">Password</string>
     <string name="login_button">Log in</string>
     <string name="auth_google_button">Continue with Google</string>
@@ -24,8 +23,8 @@
     <string name="auth_no_account">New to QuickTask?</string>
     <string name="auth_have_account">Already have an account?</string>
     <string name="remember_email_checkbox">Remember email address</string>
-    <string name="auth_show_password">Show</string>
-    <string name="auth_hide_password">Hide</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
     <string name="auth_change_email">Change email address</string>
     <string name="verification_code">Verification code</string>
     <string name="verification_hint">If this address can be used, we sent a code to it. Check your spam folder too. The code expires in 15 minutes.</string>

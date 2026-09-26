@@ -3,7 +3,6 @@
 
     <!-- Auth -->
     <string name="email">Adres e-mail</string>
-    <string name="email_invalid">Wpisz poprawny adres e-mail.</string>
     <string name="password">Hasło</string>
     <string name="login_button">Zaloguj się</string>
     <string name="auth_google_button">Kontynuuj z Google</string>
@@ -24,8 +23,8 @@
     <string name="auth_no_account">Nie masz konta?</string>
     <string name="auth_have_account">Masz już konto?</string>
     <string name="remember_email_checkbox">Zapamiętaj adres e-mail</string>
-    <string name="auth_show_password">Pokaż</string>
-    <string name="auth_hide_password">Ukryj</string>
+    <string name="auth_show_password">Pokaż hasło</string>
+    <string name="auth_hide_password">Ukryj hasło</string>
     <string name="auth_change_email">Zmień adres e-mail</string>
     <string name="verification_code">Kod potwierdzający</string>
     <string name="verification_hint">Jeśli ten adres może zostać użyty, wysłaliśmy na niego kod. Sprawdź też folder spam. Kod jest ważny przez 15 minut.</string>

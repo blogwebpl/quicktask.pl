@@ -35,6 +35,8 @@ import todo.shared.generated.resources.login_button
 import todo.shared.generated.resources.register_button
 import todo.shared.generated.resources.verify_button
 
+internal val AuthActionHeight = 52.dp
+
 @Composable
 internal fun ColumnScope.LoginFormActions(
     viewModel: AuthViewModel,
@@ -42,8 +44,6 @@ internal fun ColumnScope.LoginFormActions(
     oauthProviders: OAuthProvidersDto,
     form: LoginFormState,
 ) {
-    val scope = rememberCoroutineScope()
-    val uriHandler = LocalUriHandler.current
     val canSubmit = canSubmitLoginForm(uiState, form)
     val actionLabel = when {
         uiState.registrationId != null -> Res.string.verify_button
@@ -57,7 +57,7 @@ internal fun ColumnScope.LoginFormActions(
     Button(
         onClick = { submitLoginForm(viewModel, uiState, form) },
         enabled = !uiState.isLoading && canSubmit,
-        modifier = Modifier.fillMaxWidth().height(52.dp),
+        modifier = Modifier.fillMaxWidth().height(AuthActionHeight),
         shape = MaterialTheme.shapes.medium,
     ) {
         if (uiState.isLoading) {
@@ -76,34 +76,18 @@ internal fun ColumnScope.LoginFormActions(
 
     if (oauthPlatform != "desktop" && uiState.registrationId == null && !uiState.oauthNeedsUnlock) {
         if (oauthProviders.google) {
-            OutlinedButton(
-                onClick = {
-                    if (browserSessions) {
-                        scope.launch { browserCall("oauthStart", "provider" to "google") }
-                    } else {
-                        uriHandler.openUri("${ApiConfig.BASE_URL}/auth/google/start?platform=$oauthPlatform")
-                    }
-                },
+            OAuthLoginButton(
+                provider = "google",
+                label = stringResource(Res.string.auth_google_button),
                 enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) {
-                Text(stringResource(Res.string.auth_google_button))
-            }
+            )
         }
         if (oauthProviders.apple) {
-            OutlinedButton(
-                onClick = {
-                    if (browserSessions) {
-                        scope.launch { browserCall("oauthStart", "provider" to "apple") }
-                    } else {
-                        uriHandler.openUri("${ApiConfig.BASE_URL}/auth/apple/start?platform=$oauthPlatform")
-                    }
-                },
+            OAuthLoginButton(
+                provider = "apple",
+                label = stringResource(Res.string.auth_apple_button),
                 enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) {
-                Text(stringResource(Res.string.auth_apple_button))
-            }
+            )
         }
     }
 
@@ -129,6 +113,30 @@ internal fun ColumnScope.LoginFormActions(
                 Text(stringResource(Res.string.auth_switch_account))
             }
         }
+    }
+}
+
+@Composable
+private fun OAuthLoginButton(
+    provider: String,
+    label: String,
+    enabled: Boolean,
+) {
+    val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
+
+    OutlinedButton(
+        onClick = {
+            if (browserSessions) {
+                scope.launch { browserCall("oauthStart", "provider" to provider) }
+            } else {
+                uriHandler.openUri("${ApiConfig.BASE_URL}/auth/$provider/start?platform=$oauthPlatform")
+            }
+        },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(AuthActionHeight),
+    ) {
+        Text(label)
     }
 }
 

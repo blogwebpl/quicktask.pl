@@ -124,10 +124,24 @@ kotlin {
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            implementation(libs.cryptography.provider.openssl3.prebuilt)
         }
     }
 }
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+// Package the same Serenity 1.1.0 bundle used by the compatibility tests for Apple.
+// Keep one source copy; ordinary JVM resources are not included in Apple frameworks.
+val appleOpaqueResourcesDirectory = layout.buildDirectory.dir("generated/appleOpaqueResources")
+val appleOpaqueResources = tasks.register<Sync>("prepareAppleOpaqueResources") {
+    from("src/commonMain/resources/opaque_bundle.js") { into("files/opaque") }
+    from("src/iosMain/composeResources")
+    into(appleOpaqueResourcesDirectory)
+}
+
+compose.resources {
+    customDirectory("iosMain", appleOpaqueResources.map { appleOpaqueResourcesDirectory.get() })
 }

@@ -27,6 +27,22 @@ Use the run configurations provided by the run widget in your IDE's toolbar. You
   - JS target (slower, supports older browsers): `./gradlew :webApp:jsBrowserDevelopmentRun`
 - iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
 
+### Apple login
+
+The iPhone/iPad app, including when run on an Apple Silicon Mac, uses the local
+Serenity OPAQUE 1.1.0 bundle through WebKit. Gradle packages the bundle and bridge
+into the Apple framework's Compose resources. Passwords are passed as WebKit
+arguments; the engine uses an isolated JavaScript world and nonpersistent storage.
+The iOS cryptography provider supplies the algorithms needed for DPoP and encrypted
+user keys. The desktop JVM app continues to use its native OPAQUE libraries.
+
+Run `node scripts/opaque-apple-compatibility.cjs` to check the shipped bundle and
+bridge against the synthetic legacy account. It requires the adjacent server's
+installed `@serenity-kit/opaque` dependency, as does the existing JVM compatibility
+test. On a Mac, also run `./gradlew :shared:iosSimulatorArm64Test`, then rebuild
+`iosApp` in Xcode and check login, registration, cancellation and unlocking existing
+encrypted data. The Node check does not run WebKit or validate the signed Apple app.
+
 ### Android releases
 
 To upload directly from Android Studio to Google Play **internal testing**, fill in the ignored `android-publish.properties` file with your existing upload key alias and passwords. Then sync Gradle, select **Wyslij do testow Google Play** in the run configuration selector and click Run. This builds, signs and uploads the release bundle; it does not publish to production. Credentials must never be committed or shared. The configuration file is Git-ignored but still follows any Dropbox syncing settings of this directory.

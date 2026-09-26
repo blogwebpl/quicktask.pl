@@ -85,9 +85,17 @@ Testy negatywne JS/Wasm obejmują błędne hasło, identyfikator serwera,
 uszkodzoną odpowiedź i ponowne wykorzystanie stanu. Błędy Serenity i magazynu
 są normalizowane na granicy JavaScript/Wasm, bez ujawniania danych protokołu.
 
-Użytkownik odłożył prace wymagające Maca. iOS nie ma jeszcze zgodnego
-adaptera Rust ani testów na urządzeniu i symulatorze. Logowanie na tej platformie
-zgłasza niedostępność zamiast stosować własną konstrukcję XOR/HMAC.
+iOS używa teraz lokalnego pakietu Serenity OPAQUE 1.1.0 przez WebKit, również
+w aplikacji iPada uruchamianej na Macu. Pakiet jest identyczny z używanym przez
+serwer 1.1.0 (SHA-256: `903c6cfa9ee052a04102e21ea4f2f36da753572618765bb21a1a5cccd1b00442`).
+Hasła są argumentami WebKit, a stany protokołu pozostają w odizolowanym świecie
+JavaScript z limitem 32 operacji, czasem życia 120 sekund i jednorazowym zużyciem.
+Zasoby są lokalne; magazyn WebKit jest nietrwały, a polityka strony blokuje sieć.
+`scripts/opaque-apple-compatibility.cjs` sprawdza zgodność starego konta, klucz
+eksportu, Unicode i odrzucanie błędnych oraz zużytych stanów. Moduł
+`cryptography-provider-openssl3-prebuilt` w wersji 0.4.0 zapewnia algorytmy DPoP
+i E2E na iOS, zgodnie z wersją API kryptograficznego projektu. Test samego WebKit,
+podpisanej aplikacji oraz logowania na urządzeniu i symulatorze nadal wymaga Maca.
 
 Pełny odbiór wymaga jeszcze izolowanego testu HTTP z bazą danych:
 stare konto, zadania i załączniki, zmiana hasła, restart i równoległe karty,
