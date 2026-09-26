@@ -1,0 +1,41 @@
+[package]
+name = "opaque-kmp"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "opaque_kmp"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[features]
+bindgen = ["uniffi/cli"]
+interop = ["dep:serde", "dep:serde_json"]
+
+[dependencies]
+opaque-ke = { version = "=4.0.1", features = ["argon2"] }
+argon2 = { version = "=0.5.3", features = ["zeroize"] }
+sha2 = "=0.10.9"
+uniffi = "=0.29.4"
+zeroize = { version = "=1.8.2", features = ["derive"] }
+generic-array = "=0.14.7"
+rand = "=0.8.5"
+thiserror = "=2.0.17"
+base64 = "=0.22.1"
+serde = { version = "=1.0.228", features = ["derive"], optional = true }
+serde_json = { version = "=1.0.145", optional = true }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[[bin]]
+name = "interop"
+path = "src/bin/interop.rs"
+required-features = ["interop"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "debuginfo"

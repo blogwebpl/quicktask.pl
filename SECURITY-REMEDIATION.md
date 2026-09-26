@@ -85,17 +85,23 @@ Testy negatywne JS/Wasm obejmują błędne hasło, identyfikator serwera,
 uszkodzoną odpowiedź i ponowne wykorzystanie stanu. Błędy Serenity i magazynu
 są normalizowane na granicy JavaScript/Wasm, bez ujawniania danych protokołu.
 
-iOS używa teraz lokalnego pakietu Serenity OPAQUE 1.1.0 przez WebKit, również
-w aplikacji iPada uruchamianej na Macu. Pakiet jest identyczny z używanym przez
-serwer 1.1.0 (SHA-256: `903c6cfa9ee052a04102e21ea4f2f36da753572618765bb21a1a5cccd1b00442`).
-Hasła są argumentami WebKit, a stany protokołu pozostają w odizolowanym świecie
-JavaScript z limitem 32 operacji, czasem życia 120 sekund i jednorazowym zużyciem.
-Zasoby są lokalne; magazyn WebKit jest nietrwały, a polityka strony blokuje sieć.
-`scripts/opaque-apple-compatibility.cjs` sprawdza zgodność starego konta, klucz
-eksportu, Unicode i odrzucanie błędnych oraz zużytych stanów. Moduł
+iOS korzysta z tej samej nakładki Rust/opaque-ke co Android przez wygenerowane
+bindingi UniFFI Swift. Oryginalne źródła i Cargo.lock są w `native/opaque-kmp`;
+pochodzenie potwierdzono zgodnymi sumami bibliotek Android i desktop.
+`scripts/build-apple-opaque.sh` buduje na Macu `OpaqueKmp.xcframework` dla urządzenia
+i symulatora ARM64. Aplikacja Swift wstrzykuje most do modułu logowania Kotlin.
+Zastąpiono wcześniejszy adapter WebKit, który zgłaszał błąd podczas uruchamiania.
+
+Parametry OPAQUE i KSF oraz identyfikatory są zgodne z dotychczasowym Androidem.
+Stany pozostają uchwytami Rust, są ograniczone łącznie do 32, wygasają po
+120 sekundach i są zużywane także po błędzie. Operacje wykonuje kolejka poza
+wątkiem interfejsu, ograniczająca jednoczesne użycie pamięci przez Argon2.
+Klucze sesji i eksportu są jawnie czyszczone w Rust po użyciu; błędy nie zawierają
+danych protokołu. Testy źródłowej nakładki sprawdzają zgodność z Serenity 1.1.0,
+a schemat `iosAppNativeTests` uruchamia testy mostu Swift na symulatorze. Moduł
 `cryptography-provider-openssl3-prebuilt` w wersji 0.4.0 zapewnia algorytmy DPoP
-i E2E na iOS, zgodnie z wersją API kryptograficznego projektu. Test samego WebKit,
-podpisanej aplikacji oraz logowania na urządzeniu i symulatorze nadal wymaga Maca.
+i E2E na iOS, zgodnie z wersją API kryptograficznego projektu. Budowa XCFramework,
+testy Swift oraz podpisanej aplikacji i logowania na urządzeniu nadal wymagają Maca.
 
 Pełny odbiór wymaga jeszcze izolowanego testu HTTP z bazą danych:
 stare konto, zadania i załączniki, zmiana hasła, restart i równoległe karty,

@@ -1,0 +1,11 @@
+[bindings.kotlin]
+package_name = "com.opaquekmp"
+cdylib_name = "opaque_kmp"
+android = true
+android_cleaner = false
+disable_java_cleaner = true
+
+[bindings.swift]
+module_name = "OpaqueKmp"
+ffi_module_name = "OpaqueKmpFFI"
+ffi_module_filename = "OpaqueKmpFFI"

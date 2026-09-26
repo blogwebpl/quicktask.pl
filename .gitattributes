@@ -1,0 +1,8 @@
+# Preserve the original Rust delivery byte-for-byte for SOURCE-SHA256SUMS.txt.
+native/opaque-kmp/rust/** -text
+native/opaque-kmp/bindings/** -text
+native/opaque-kmp/tests/** -text
+native/opaque-kmp/rust-toolchain.toml -text
+
+# Shell scripts must also run after a Windows checkout.
+scripts/*.sh text eol=lf

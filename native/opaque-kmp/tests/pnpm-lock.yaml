@@ -1,0 +1,23 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@serenity-kit/opaque':
+        specifier: 1.1.0
+        version: 1.1.0
+
+packages:
+
+  '@serenity-kit/opaque@1.1.0':
+    resolution: {integrity: sha512-Y6v/+hRMn0MdMEk5+/ArM0vPIiFfFEbdTZc7oAx+cWyvGODGezAQ/sMjXBVogf7NsS9z9EV0Ve5paZCVULuedw==}
+    hasBin: true
+
+snapshots:
+
+  '@serenity-kit/opaque@1.1.0': {}

@@ -29,19 +29,50 @@ Use the run configurations provided by the run widget in your IDE's toolbar. You
 
 ### Apple login
 
-The iPhone/iPad app, including when run on an Apple Silicon Mac, uses the local
-Serenity OPAQUE 1.1.0 bundle through WebKit. Gradle packages the bundle and bridge
-into the Apple framework's Compose resources. Passwords are passed as WebKit
-arguments; the engine uses an isolated JavaScript world and nonpersistent storage.
-The iOS cryptography provider supplies the algorithms needed for DPoP and encrypted
-user keys. The desktop JVM app continues to use its native OPAQUE libraries.
+The iPhone/iPad app, including when run on an Apple Silicon Mac, calls the same
+Rust `opaque-ke` wrapper as Android through its generated UniFFI Swift bindings.
+The original source and dependency lock are included in
+[`native/opaque-kmp`](native/opaque-kmp/README.md). `ContentView` supplies the
+native Swift bridge to `MainViewController`, which injects it into authentication.
+The OpenSSL provider supplies the remaining DPoP and encrypted-key operations.
 
-Run `node scripts/opaque-apple-compatibility.cjs` to check the shipped bundle and
-bridge against the synthetic legacy account. It requires the adjacent server's
-installed `@serenity-kit/opaque` dependency, as does the existing JVM compatibility
-test. On a Mac, also run `./gradlew :shared:iosSimulatorArm64Test`, then rebuild
-`iosApp` in Xcode and check login, registration, cancellation and unlocking existing
-encrypted data. The Node check does not run WebKit or validate the signed Apple app.
+Before opening/building `iosApp`, run once from the client root on a Mac with
+Xcode selected, Python 3 and Rust/rustup installed:
+
+```sh
+bash scripts/build-apple-opaque.sh
+```
+
+This builds and checks `iosApp/Frameworks/OpaqueKmp.xcframework` for device and
+simulator ARM64. Xcode is already configured to link, embed and sign it. Rebuild
+the framework when its source or dependencies change. It is ignored by Git;
+ordinary app builds consume the artifact without running Cargo. A verified
+existing framework is reused, and a failed rebuild preserves the previous one.
+
+Protocol tests and source provenance are documented in the native wrapper README.
+`scripts/opaque-native-legacy.cjs` also checks a rebuilt Rust test executable
+against the existing synthetic account and export key. With the adjacent server's
+dependencies installed, run from the client root:
+
+```sh
+cargo +1.90.0 build --locked --manifest-path native/opaque-kmp/rust/Cargo.toml --features interop --bin interop
+node scripts/opaque-native-legacy.cjs
+```
+
+Set `OPAQUE_INTEROP_BIN` if the executable is in a custom Cargo target directory.
+On a Mac, run `./gradlew :shared:iosSimulatorArm64Test` for the shared adapter and
+cryptography tests. The `iosAppNativeTests` Xcode scheme runs the Swift bridge
+against the actual framework in a hosted iOS test app. For the command line, find
+an ARM64 simulator UUID with `xcrun simctl list devices available`, then run:
+
+```sh
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosAppNativeTests \
+  -destination 'platform=iOS Simulator,id=<SIMULATOR_UUID>' test
+```
+
+Finally, run `iosApp` and check existing-account login and encrypted data,
+registration, wrong passwords and cancellation. Rust/Node compatibility tests
+and Kotlin compilation on Windows do not replace these Apple runtime checks.
 
 ### Android releases
 

@@ -1,0 +1,9 @@
+{
+  "name": "opaque-kmp-interop-tests",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "test": "node interop.mjs" },
+  "dependencies": { "@serenity-kit/opaque": "1.1.0" },
+  "packageManager": "pnpm@10.28.2"
+}
