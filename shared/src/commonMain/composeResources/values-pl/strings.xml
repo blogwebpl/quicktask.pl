@@ -3,6 +3,7 @@
 
     <!-- Auth -->
     <string name="email">Adres e-mail</string>
+    <string name="email_invalid">Wpisz poprawny adres e-mail.</string>
     <string name="password">Hasło</string>
     <string name="login_button">Zaloguj się</string>
     <string name="auth_google_button">Kontynuuj z Google</string>
@@ -15,15 +16,14 @@
     <string name="register_button">Załóż konto</string>
     <string name="register_switch">Załóż konto</string>
     <string name="login_switch">Zaloguj się</string>
+    <string name="auth_login_first_title">Witaj w QuickTask</string>
     <string name="auth_login_title">Witaj ponownie</string>
-    <string name="auth_login_subtitle">Zaloguj się i wróć do swoich zadań.</string>
-    <string name="auth_register_title">Zacznij z QuickTask</string>
-    <string name="auth_register_subtitle">Zapisuj pomysły, porządkuj zadania i miej je pod ręką.</string>
+    <string name="auth_register_title">Załóż konto</string>
     <string name="auth_verification_title">Sprawdź swoją pocztę</string>
     <string name="auth_verification_subtitle">Wpisz kod, aby dokończyć zakładanie konta.</string>
     <string name="auth_no_account">Nie masz konta?</string>
     <string name="auth_have_account">Masz już konto?</string>
-    <string name="auth_email_example">twoj@email.pl</string>
+    <string name="remember_email_checkbox">Zapamiętaj adres e-mail</string>
     <string name="auth_show_password">Pokaż</string>
     <string name="auth_hide_password">Ukryj</string>
     <string name="auth_change_email">Zmień adres e-mail</string>
@@ -315,6 +315,7 @@
     <string name="completed_at">Wykonano: %1$s</string>
     <string name="completed_restore">Przywróć do Inboxa</string>
     <string name="completed_trash">Przenieś do kosza</string>
+    <string name="completed_trash_question">Przenieść „%1$s” do kosza? Ten element będzie można przywrócić z kosza.</string>
     <string name="completed_refresh">Odśwież</string>
     <string name="contacts_title">Kontakty</string>
     <string name="contacts_name">Nazwa kontaktu</string>

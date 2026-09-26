@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +36,7 @@ import org.jetbrains.compose.resources.StringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -156,29 +158,79 @@ internal fun ReferenceTagsDialog(
     errorMessageRes: StringResource?,
     onDismiss: () -> Unit,
     onSave: (List<String>, List<String>) -> Unit,
+    itemTitle: String? = null,
 ) {
     val selectedTagIds = remember(initialTags) { mutableStateListOf<String>().apply { addAll(initialTags.map { it.tagId }) } }
     val newTagNames = remember { mutableStateListOf<String>() }
     var showTagPicker by remember { mutableStateOf(false) }
     val validTags = selectedTagIds.size <= 50 && newTagNames.size <= 50 && newTagNames.all { it.length <= 100 }
-    AlertDialog(
-        onDismissRequest = { if (!isSaving) onDismiss() },
-        title = { Text(stringResource(if (isConversion) Res.string.reference_move_from_inbox else Res.string.reference_tags_edit)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TagFieldSection(availableTags, selectedTagIds, newTagNames,
-                    onOpenTagPicker = { if (!isSaving) showTagPicker = true }, initialTags = initialTags)
-                if (!validTags) Text(stringResource(Res.string.reference_tag_limit), color = MaterialTheme.colorScheme.error)
-                errorMessageRes?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+    val saveTags = { onSave(selectedTagIds.toList(), newTagNames.toList()) }
+    if (isConversion) {
+        Dialog(
+            onDismissRequest = { if (!isSaving) onDismiss() },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(stringResource(Res.string.reference_move_from_inbox)) },
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss, enabled = !isSaving) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.action_close))
+                            }
+                        },
+                        actions = {
+                            Button(onClick = saveTags, enabled = !isSaving && validTags,
+                                modifier = Modifier.padding(end = 8.dp)) {
+                                Text(stringResource(Res.string.task_save_button))
+                            }
+                        },
+                    )
+                },
+            ) { paddingValues ->
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues)
+                        .imePadding()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    Spacer(Modifier.height(8.dp))
+                    itemTitle?.let {
+                        Text(it, style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    TagFieldSection(availableTags, selectedTagIds, newTagNames,
+                        onOpenTagPicker = { if (!isSaving) showTagPicker = true }, initialTags = initialTags)
+                    if (!validTags) Text(stringResource(Res.string.reference_tag_limit), color = MaterialTheme.colorScheme.error)
+                    errorMessageRes?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+                    Spacer(Modifier.height(16.dp))
+                }
             }
-        },
-        confirmButton = {
-            Button(onClick = { onSave(selectedTagIds.toList(), newTagNames.toList()) }, enabled = !isSaving && validTags) {
-                Text(stringResource(Res.string.task_save_button))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text(stringResource(Res.string.timer_cancel)) } },
-    )
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = { if (!isSaving) onDismiss() },
+            title = { Text(stringResource(Res.string.reference_tags_edit)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TagFieldSection(availableTags, selectedTagIds, newTagNames,
+                        onOpenTagPicker = { if (!isSaving) showTagPicker = true }, initialTags = initialTags)
+                    if (!validTags) Text(stringResource(Res.string.reference_tag_limit), color = MaterialTheme.colorScheme.error)
+                    errorMessageRes?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = saveTags, enabled = !isSaving && validTags) {
+                    Text(stringResource(Res.string.task_save_button))
+                }
+            },
+            dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text(stringResource(Res.string.timer_cancel)) } },
+        )
+    }
     if (showTagPicker) {
         TagSelectionBottomSheet(availableTags, selectedTagIds, newTagNames,
             onDismiss = { showTagPicker = false },

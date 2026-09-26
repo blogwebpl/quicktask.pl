@@ -343,6 +343,7 @@ fun InboxScreen(
     itemToConvertToReference?.let { item ->
         ReferenceTagsDialog(
             isConversion = true,
+            itemTitle = item.title,
             availableTags = nextActionOptions.tags,
             initialTags = item.tags,
             isSaving = item.isPendingConfirmation,

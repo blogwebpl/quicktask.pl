@@ -3,8 +3,6 @@ package pl.quicktask.app.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -23,8 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,7 +30,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,17 +46,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import pl.quicktask.app.items.model.InboxTagDto
 import pl.quicktask.app.nextactions.model.NextActionTag
 import todo.shared.generated.resources.Res
-import todo.shared.generated.resources.action_add_chip
 import todo.shared.generated.resources.action_clear
 import todo.shared.generated.resources.action_close
-import todo.shared.generated.resources.ic_tag
 import todo.shared.generated.resources.new_tag_format
-import todo.shared.generated.resources.no_tags
 import todo.shared.generated.resources.search_or_create_tag
 import todo.shared.generated.resources.tags_header
 import todo.shared.generated.resources.tags_title
@@ -121,6 +110,12 @@ fun TagSelectionBottomSheet(
         }
     }
 
+    fun confirmSelection() {
+        if (trimmedQuery.isNotBlank()) addCurrentQueryAsNewTag()
+        onConfirm(currentSelectedTagIds.toList(), currentNewTagNames.toList())
+        onDismiss()
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -156,13 +151,7 @@ fun TagSelectionBottomSheet(
                 )
 
                 Button(
-                    onClick = {
-                        if (trimmedQuery.isNotBlank() && showCreateOption) {
-                            addCurrentQueryAsNewTag()
-                        }
-                        onConfirm(currentSelectedTagIds.toList(), currentNewTagNames.toList())
-                        onDismiss()
-                    },
+                    onClick = { confirmSelection() },
                     shape = CircleShape,
                 ) {
                     Text(stringResource(Res.string.task_save_button), style = MaterialTheme.typography.labelLarge)
@@ -202,7 +191,7 @@ fun TagSelectionBottomSheet(
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { addCurrentQueryAsNewTag() },
+                    onDone = { confirmSelection() },
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -257,166 +246,36 @@ fun TagSelectionBottomSheet(
 
                 if (showCreateOption) {
                     item {
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    addCurrentQueryAsNewTag()
-                                }
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                .clickable { confirmSelection() },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Text(
-                                text = stringResource(Res.string.new_tag_format, trimmedQuery),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    text = stringResource(Res.string.new_tag_format, trimmedQuery),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun TagRowItem(
-    tagName: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_tag),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = tagName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun TagFieldSection(
-    availableTags: List<NextActionTag>,
-    selectedTagIds: List<String>,
-    newTagNames: List<String>,
-    onOpenTagPicker: () -> Unit,
-    initialTags: List<InboxTagDto> = emptyList(),
-) {
-    val selectedTagsList = buildList {
-        selectedTagIds.forEach { tagId ->
-            val name = availableTags.find { it.tagId == tagId }?.name
-                ?: initialTags.find { it.tagId == tagId }?.name
-            if (name != null && name !in this) {
-                add(name)
-            }
-        }
-        newTagNames.forEach { name ->
-            if (name !in this) {
-                add(name)
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            text = stringResource(Res.string.tags_title),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        if (selectedTagsList.isEmpty()) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenTagPicker),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_tag),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(Res.string.no_tags),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenTagPicker),
-            ) {
-                selectedTagsList.forEach { tagName ->
-                    AssistChip(
-                        onClick = onOpenTagPicker,
-                        label = { Text("#$tagName") },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_tag),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        ),
-                    )
-                }
-
-                AssistChip(
-                    onClick = onOpenTagPicker,
-                    label = { Text(stringResource(Res.string.action_add_chip)) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        labelColor = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-            }
         }
     }
 }

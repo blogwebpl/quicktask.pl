@@ -23,6 +23,30 @@ import kotlin.test.assertTrue
 
 class ReferenceRepositoryTest {
     @Test
+    fun confirmedMoveRemovesInboxItemEvenWhenRefreshFails(): Unit = runBlocking {
+        val fixture = encryptedFixture()
+        val client = HttpClient(MockEngine { request ->
+            when (request.url.encodedPath) {
+                "/inbox/${fixture.inbox.itemId}/reference" ->
+                    respond("", HttpStatusCode.NoContent)
+                "/inbox/projects" ->
+                    respond("refresh failed", HttpStatusCode.InternalServerError)
+                else -> error("Unexpected URL: ${request.url.encodedPath}")
+            }
+        }) { install(ContentNegotiation) { json() } }
+        try {
+            val module = fixture.module(client)
+            module.store.cacheInbox(listOf(fixture.mapper.inbox(fixture.inbox)))
+
+            assertTrue(module.references.convertFromInbox(fixture.inbox.itemId).isSuccess)
+            assertTrue(module.store.itemsFlow.value.isEmpty())
+            assertTrue(!module.store.isCacheValid)
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun createReferenceSendsEncryptedReferencePayload(): Unit = runBlocking {
         val fixture = encryptedFixture()
         var requestBody = ""

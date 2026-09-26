@@ -138,11 +138,11 @@ class AuthViewModel(
     fun register(email: String, password: String) {
         if (_uiState.value.isLoading) return
         AppLoggerManager.logFunction("AuthViewModel", "register", "email=${email.trim()}")
-        if (password.length < 12) {
+        if (password.length < MIN_AUTH_PASSWORD_LENGTH) {
             AppLoggerManager.logStateChange(
                 "AuthViewModel",
                 "Rejestracja zatrzymana przez walidację klienta",
-                "passwordLength=${password.length}, minimum=12",
+                "passwordLength=${password.length}, minimum=$MIN_AUTH_PASSWORD_LENGTH",
             )
             _uiState.update { it.copy(errorMessageRes = Res.string.password_min_length, errorMessage = null) }
             return

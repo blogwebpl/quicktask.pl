@@ -130,6 +130,8 @@ class ReferenceRepository(
             contentType(ContentType.Application.Json)
             setBody(request)
         }
+        // The move is committed even if refreshing the lists fails afterwards.
+        store.removeOptimisticItem(itemId)
         refreshAfterWrite(inbox = true)
     }
 

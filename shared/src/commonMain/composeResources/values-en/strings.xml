@@ -3,6 +3,7 @@
 
     <!-- Auth -->
     <string name="email">Email address</string>
+    <string name="email_invalid">Enter a valid email address.</string>
     <string name="password">Password</string>
     <string name="login_button">Log in</string>
     <string name="auth_google_button">Continue with Google</string>
@@ -15,15 +16,14 @@
     <string name="register_button">Create account</string>
     <string name="register_switch">Create account</string>
     <string name="login_switch">Log in</string>
+    <string name="auth_login_first_title">Welcome to QuickTask</string>
     <string name="auth_login_title">Welcome back</string>
-    <string name="auth_login_subtitle">Log in to pick up where you left off.</string>
-    <string name="auth_register_title">Get started with QuickTask</string>
-    <string name="auth_register_subtitle">Capture ideas, organize tasks, and keep them close.</string>
+    <string name="auth_register_title">Create account</string>
     <string name="auth_verification_title">Check your inbox</string>
     <string name="auth_verification_subtitle">Enter the code to finish creating your account.</string>
     <string name="auth_no_account">New to QuickTask?</string>
     <string name="auth_have_account">Already have an account?</string>
-    <string name="auth_email_example">you@example.com</string>
+    <string name="remember_email_checkbox">Remember email address</string>
     <string name="auth_show_password">Show</string>
     <string name="auth_hide_password">Hide</string>
     <string name="auth_change_email">Change email address</string>
@@ -300,6 +300,7 @@
     <string name="completed_at">Completed: %1$s</string>
     <string name="completed_restore">Restore to Inbox</string>
     <string name="completed_trash">Move to trash</string>
+    <string name="completed_trash_question">Move “%1$s” to trash? You can restore it from there.</string>
     <string name="completed_refresh">Refresh</string>
     <string name="contacts_title">Contacts</string>
     <string name="contacts_name">Contact name</string>
